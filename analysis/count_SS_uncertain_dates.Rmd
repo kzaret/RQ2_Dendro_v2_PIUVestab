@@ -31,7 +31,7 @@ fig_nums <- captioner("Figure ", suffix = ": ", auto_space = FALSE, style = "b",
 options(width = 130)
 ```
 ```{r read_chunks, echo = FALSE}
-knitr::read_chunk(here("count_SS_uncertain_dates.R"))
+knitr::read_chunk(here("analysis","count_SS_uncertain_dates.R"))
 ```
 
 ## Background
@@ -89,8 +89,8 @@ Let's load **rstan** and some other packages we'll need, and set the number of c
 ```{r setup, message=FALSE}
 ```
 ```{r load_stanmodels, echo=FALSE}
-if(file.exists(here("Poisson_SS.RData")))
-   load(here("Poisson_SS.RData"))
+if(file.exists(here("analysis","results","Poisson_SS.RData")))
+   load(here("analysis","results","Poisson_SS.RData"))
 ```
 
 We'll make the simulated time series long enough to be reasonably informative and set the process error SD $\sigma$ so that the lognormal distribution of the expected count $\lambda_t$, conditional on $\lambda_{t-1}$, has a 30% CV. To keep things simple, we set $\mu_0 = 0$ and $\sigma_0 = \sigma$.
@@ -101,7 +101,7 @@ We'll make the simulated time series long enough to be reasonably informative an
 Here is the same model we just simulated from, coded as a Stan program.
 
 ```{r Poisson_SS.stan, echo=FALSE}
-writeLines(readLines(here("Poisson_SS.stan")))
+writeLines(readLines(here("analysis","Poisson_SS.stan")))
 ```
 
 Most of the code is intuitive and closely follows the math, but we've used a common and extremely useful reparameterization called hierarchical noncentering (or less formally the "Matt trick" after Stan team member Matt Hoffman; see Section 22.7 of the [Stan 2.24 Users Guide](https://mc-stan.org/docs/2_24/stan-users-guide-2_24.pdf)). Instead of declaring the latent states $\mathbf{x}$ as a primitive parameter, we declare a vector of standardized residuals $\mathbf{z} = \mathbf{w}/\sigma$ which are given a unit normal prior. After rescaling, this implies the appropriate conditionally normal process model prior on $x_t$. Monnahan et al. (2018) further discuss the reasons why the noncentered parameterization of "random effects" almost always produces better-behaved sampling than the naive centered parameterization in practice. Finally, because we're doing Bayesian inference we have to specify priors on all the top-level or hyperparameters, in this case just $\sigma$, which we give a $N(0,3)$ prior -- weakly informative on the log scale, but not so implausibly broad as to invite sampling problems.
@@ -109,7 +109,7 @@ Most of the code is intuitive and closely follows the math, but we've used a com
 The marginal Poisson / conditional multinomial model looks like this when translated into Stan:
 
 ```{r Poisson_multinomial_SS.stan, echo=FALSE}
-writeLines(readLines(here("Poisson_multinomial_SS.stan")))
+writeLines(readLines(here("analysis","Poisson_multinomial_SS.stan")))
 ```
 
 Now we're ready to call Stan from R to draw a sample from the posterior distribution of the Poisson state-space model, given the simulated data. We run 3 randomly initiated parallel chains of 2000 iterations, discarding the first 1000 for warmup (the HMC algorithm requires careful tuning, which Stan automates with the No U-Turn Sampler or NUTS).
@@ -188,7 +188,7 @@ Intuitively, the marginal likelihood is just a weighted average of the condition
 This implementation treats the observation error parameter $r$ as known *a priori* -- essentially a point-mass prior on the true value. This is intended to represent the situation where we have some prior information on the error distribution for each observation $t_i$, e.g., from a tree ring age-correction model. In reality the situation is more complex, and there will likely be a unique error distribution for each age estimate. This added complexity could be built upon the minimal model here. 
 
 ```{r Poisson_multinomial_tobs_SS.stan, echo=FALSE}
-writeLines(readLines(here("Poisson_multinomial_tobs_SS.stan")))
+writeLines(readLines(here("analysis","Poisson_multinomial_tobs_SS.stan")))
 ```
 
 ### Comparing Models

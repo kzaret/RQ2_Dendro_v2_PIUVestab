@@ -24,8 +24,8 @@ library(here)
 options(mc.cores = parallel::detectCores() - 1)
 ## @knitr
 
-if(file.exists(here("Poisson_SS.RData")))
-  load(here("Poisson_SS.RData"))
+if(file.exists(here("analysis","results","Poisson_SS.RData")))
+  load(here("analysis","results","Poisson_SS.RData"))
 
 #---------------------------------------------------------------------------------
 # POISSON STATE-SPACE MODEL
@@ -54,7 +54,7 @@ y <- rpois(TT, exp(x))
 #---------------------------------------------------------------------------------
 
 ## @knitr fit_pois
-fit_pois <- stan(file = here("Poisson_SS.stan"), 
+fit_pois <- stan(file = here("analysis","Poisson_SS.stan"), 
                  data = list(T = TT, y = y), pars = c("sigma","x"),
                  chains = 3, iter = 2000, warmup = 1000,
                  control = list(adapt_delta = 0.99, max_treedepth = 12))
@@ -68,7 +68,7 @@ print(fit_pois, pars = "sigma", probs = c(0.025,0.5,0.975))
 #---------------------------------------------------------------------------------
 
 ## @knitr fit_pois_mn
-fit_pois_mn <- stan(file = here("Poisson_multinomial_SS.stan"), 
+fit_pois_mn <- stan(file = here("analysis","Poisson_multinomial_SS.stan"), 
                     data = list(T = TT, y = y), pars = c("sigma","x"),
                     init = function() list(sigma = runif(1,0.1,0.5)),
                     chains = 3, iter = 2000, warmup = 1000,
@@ -83,7 +83,7 @@ print(fit_pois_mn, pars = "sigma", probs = c(0.025,0.5,0.975))
 #---------------------------------------------------------------------------------
 
 ## @knitr fit_mn
-fit_mn <- stan(file = here("multinomial_SS.stan"), 
+fit_mn <- stan(file = here("analysis","multinomial_SS.stan"), 
                data = list(T = TT, y = y), pars = c("sigma","pi","lambda"),
                chains = 3, iter = 2000, warmup = 1000,
                control = list(adapt_delta = 0.99, max_treedepth = 12))
@@ -158,7 +158,7 @@ y <- replace(rep(0,TT), as.numeric(names(tab)), tab) # observed counts
 #---------------------------------------------------------------------------------
 
 ## @knitr fit_tau
-fit_tau <- stan(file = here("Poisson_multinomial_SS.stan"), 
+fit_tau <- stan(file = here("analysis","Poisson_multinomial_SS.stan"), 
               data = list(T = TT, y = chi), pars = c("sigma","x"),
               chains = 3, iter = 2000, warmup = 1000,
               control = list(adapt_delta = 0.99, max_treedepth = 12))
@@ -171,7 +171,7 @@ print(fit_tau, pars = "sigma", probs = c(0.025,0.5,0.975))
 #---------------------------------------------------------------------------------
 
 ## @knitr fit_t
-fit_t <- stan(file = here("Poisson_multinomial_SS.stan"), 
+fit_t <- stan(file = here("analysis","Poisson_multinomial_SS.stan"), 
               data = list(T = TT, y = y), pars = c("sigma","x"),
               chains = 3, iter = 2000, warmup = 1000,
               control = list(adapt_delta = 0.99, max_treedepth = 12))
@@ -184,7 +184,7 @@ print(fit_t, pars = "sigma", probs = c(0.025,0.5,0.975))
 #---------------------------------------------------------------------------------
 
 ## @knitr fit_tobs
-fit_tobs <- stan(file = here("Poisson_multinomial_tobs_SS.stan"), 
+fit_tobs <- stan(file = here("analysis","Poisson_multinomial_tobs_SS.stan"), 
                  data = list(T = TT, y = y, r = r), pars = c("sigma","x"),
                  chains = 3, iter = 2000, warmup = 1000,
                  control = list(adapt_delta = 0.99, max_treedepth = 12))
@@ -298,6 +298,6 @@ box()
 #---------------------------------------------------------------------------------
 
 save(list = ls()[sapply(ls(), function(x) do.call(class, list(as.name(x)))) == "stanfit"], 
-     file = here("Poisson_SS.RData"))
+     file = here("analysis","results","Poisson_SS.RData"))
 
 
