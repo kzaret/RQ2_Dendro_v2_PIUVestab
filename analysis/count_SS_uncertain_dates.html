@@ -11,7 +11,7 @@
 
 <meta name="author" content="Eric R. Buhle [and Kyla S. Zaret?]" />
 
-<meta name="date" content="2020-11-24" />
+<meta name="date" content="2020-12-03" />
 
 <title>Modeling Count Time Series with Individual Time Uncertainty</title>
 
@@ -2792,7 +2792,7 @@ div.tocify {
 
 <h1 class="title toc-ignore">Modeling Count Time Series with Individual Time Uncertainty</h1>
 <h4 class="author">Eric R. Buhle [and Kyla S. Zaret?]</h4>
-<h4 class="date">2020-11-24</h4>
+<h4 class="date">2020-12-03</h4>
 
 </div>
 
@@ -2934,7 +2934,7 @@ model {
   y ~ multinomial(pi);      // conditional distribution of counts
 }</code></pre>
 <p>Now we’re ready to call Stan from R to draw a sample from the posterior distribution of the Poisson state-space model, given the simulated data. We run 3 randomly initiated parallel chains of 2000 iterations, discarding the first 1000 for warmup (the HMC algorithm requires careful tuning, which Stan automates with the No U-Turn Sampler or NUTS).</p>
-<pre class="r"><code>fit_pois &lt;- stan(file = here(&quot;Poisson_SS.stan&quot;), 
+<pre class="r"><code>fit_pois &lt;- stan(file = here(&quot;analysis&quot;,&quot;Poisson_SS.stan&quot;), 
                  data = list(T = TT, y = y), pars = c(&quot;sigma&quot;,&quot;x&quot;),
                  chains = 3, iter = 2000, warmup = 1000,
                  control = list(adapt_delta = 0.99, max_treedepth = 12))</code></pre>
@@ -2952,7 +2952,7 @@ and Rhat is the potential scale reduction factor on split chains (at
 convergence, Rhat=1).</code></pre>
 <p>The Gelman-Rubin <span class="math inline">\(\hat{R}\)</span> diagnostic is perfect, indicating the chains mixed well, and the effective sample size (adjusting for autocorrelation) is plenty for our purposes, so we can safely proceed to use the sample for posterior inference. We could further explore the posterior interactively in ShinyStan by calling <code>launch_shinystan(fit_pois)</code>. The posterior mean for <span class="math inline">\(\sigma\)</span> of 0.21 is close to the true value of 0.3 and the 95% credible interval (0.11, 0.36) includes it.</p>
 <p>Now let’s fit the conditional multinomial model.</p>
-<pre class="r"><code>fit_pois_mn &lt;- stan(file = here(&quot;Poisson_multinomial_SS.stan&quot;), 
+<pre class="r"><code>fit_pois_mn &lt;- stan(file = here(&quot;analysis&quot;,&quot;Poisson_multinomial_SS.stan&quot;), 
                     data = list(T = TT, y = y), pars = c(&quot;sigma&quot;,&quot;x&quot;),
                     init = function() list(sigma = runif(1,0.1,0.5)),
                     chains = 3, iter = 2000, warmup = 1000,
@@ -3094,7 +3094,7 @@ tt &lt;- pmin(tau + rgeom(N,r), TT)     # observed times
 tab &lt;- table(tt)
 y &lt;- replace(rep(0,TT), as.numeric(names(tab)), tab) # observed counts</code></pre>
 <p>First we’ll consider the ideal scenario. If we knew the true counts <span class="math inline">\(\boldsymbol{\chi}\)</span>, we could fit them with the Poisson-multinomial model:</p>
-<pre class="r"><code>fit_tau &lt;- stan(file = here(&quot;Poisson_multinomial_SS.stan&quot;), 
+<pre class="r"><code>fit_tau &lt;- stan(file = here(&quot;analysis&quot;,&quot;Poisson_multinomial_SS.stan&quot;), 
               data = list(T = TT, y = chi), pars = c(&quot;sigma&quot;,&quot;x&quot;),
               chains = 3, iter = 2000, warmup = 1000,
               control = list(adapt_delta = 0.99, max_treedepth = 12))</code></pre>
@@ -3111,7 +3111,7 @@ For each parameter, n_eff is a crude measure of effective sample size,
 and Rhat is the potential scale reduction factor on split chains (at 
 convergence, Rhat=1).</code></pre>
 <p>As expected, the posterior distribution of <span class="math inline">\(\sigma\)</span> is close to the true value of 0.3. Next we’ll consider a scenario of ignorance, in which we assume the observed event times are correct as measured:</p>
-<pre class="r"><code>fit_t &lt;- stan(file = here(&quot;Poisson_multinomial_SS.stan&quot;), 
+<pre class="r"><code>fit_t &lt;- stan(file = here(&quot;analysis&quot;,&quot;Poisson_multinomial_SS.stan&quot;), 
               data = list(T = TT, y = y), pars = c(&quot;sigma&quot;,&quot;x&quot;),
               chains = 3, iter = 2000, warmup = 1000,
               control = list(adapt_delta = 0.99, max_treedepth = 12))</code></pre>
@@ -3128,7 +3128,7 @@ For each parameter, n_eff is a crude measure of effective sample size,
 and Rhat is the potential scale reduction factor on split chains (at 
 convergence, Rhat=1).</code></pre>
 <p>Taking the observations at face value introduces a notable bias; the 95% credible interval for <span class="math inline">\(\sigma\)</span> does not include the true value. Finally, we’ll fit the model that generated the data and see if it recovers the true parameters:</p>
-<pre class="r"><code>fit_tobs &lt;- stan(file = here(&quot;Poisson_multinomial_tobs_SS.stan&quot;), 
+<pre class="r"><code>fit_tobs &lt;- stan(file = here(&quot;analysis&quot;,&quot;Poisson_multinomial_tobs_SS.stan&quot;), 
                  data = list(T = TT, y = y, r = r), pars = c(&quot;sigma&quot;,&quot;x&quot;),
                  chains = 3, iter = 2000, warmup = 1000,
                  control = list(adapt_delta = 0.99, max_treedepth = 12))</code></pre>
