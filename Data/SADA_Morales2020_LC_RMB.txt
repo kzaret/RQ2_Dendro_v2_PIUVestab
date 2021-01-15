@@ -1,0 +1,19 @@
+Buzz Nanavarti downloaded these for me from  https://www.ncdc.noaa.gov/paleo-search/study/30612 on 1/12/2021
+
+Cell midpoints:  RMD (43.75S, 72.75W); LC (47.75S, 73.25W)
+
+Morales et al. 2020, South American Drought Atlas
+
+Summary/Abstract:
+
+South American (SA) societies are highly vulnerable to droughts and pluvials, but lack of long-term climate observations severely limits our understanding of the global processes driving climatic variability in the region. The number and quality of SA climate-sensitive tree ring chronologies have significantly increased in recent decades, now providing a robust network of 286 records for characterizing hydroclimate variability since 1400 CE. We combine this network with a self-calibrated Palmer Drought Severity Index (scPDSI) dataset to derive the South American Drought Atlas (SADA) over the continent south of 12°S. The gridded annual reconstruction of austral summer scPDSI is the most spatially complete estimate of SA hydroclimate to date, and well matches past historical dry/wet events. Relating the SADA to the Australia–New Zealand Drought Atlas, sea surface temperatures and atmospheric pressure fields, we determine that the El Niño–Southern Oscillation (ENSO) and the Southern Annular Mode (SAM) are strongly associated with spatially extended droughts and pluvials over the SADA domain during the past several centuries. SADA also exhibits more extended severe droughts and extreme pluvials since the mid-20th century. Extensive droughts are consistent with the observed 20th-century trend toward positive SAM anomalies concomitant with the weakening of midlatitude Westerlies, while low-level moisture transport intensified by global warming has favored extreme rainfall across the subtropics. The SADA thus provides a long-term context for observed hydroclimatic changes and for 21st-century Intergovernmental Panel on Climate Change (IPCC) projections that suggest SA will experience more frequent/severe droughts and rainfall events as a consequence of increasing greenhouse gas emissions.
+			
+			
+Study Notes:
+
+The SADA is a tree ring-based spatiotemporal reconstruction of austral summer (December, January, February [DJF]) droughts and pluvials over a large portion of South America (12° to 56°S) spanning the last 600 y (1400-2000 C.E.). The reconstruction has been produced on a 2,715 point regular latitude–longitude grid with 0.5° resolution, and overall reflects contemporaneous summer soil moisture conditions, as well as those accumulated over previous seasons.
+
+The year of each scPDSI value (Dec-Feb average) in SADA_t netCDF file corresponds to the calendar year of the respective December, while the year of each scPDSI value (Dec-Feb average) in SADA_t+1 netCDF file corresponds to the calendar year of the respective January.
+
+Original website of study at Center for Climate and Resilience Research: http://www.cr2.cl/datos-dendro-sada/
+		

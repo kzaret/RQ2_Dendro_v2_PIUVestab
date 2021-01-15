@@ -1,0 +1,181 @@
+Patch,Plot,Measurement_ID,Substrate,Depth (cm)
+Transition,R01,R01_01,OM,39
+Transition,R01,R01_02,Dicran,10.5
+Transition,R01,R01_03,OM,5
+Transition,R01,R01_04,OM,5
+Transition,R01,R01_05,SPMA,4
+Transition,R01,R01_06,SPMA,21
+Transition,R01,R01_07,SPMA,8
+Transition,R01,R01_08,OM,4
+Transition,R01,R01_09,OM,15
+Transition,R01,R01_10,Dicran,5
+Transition,R02,R02_01,Cush,8
+Transition,R02,R02_02,Cush,4
+Transition,R02,R02_03,Dicran,7
+Transition,R02,R02_04,Dicran,4
+Transition,R02,R02_05,SPMA,23
+Transition,R02,R02_06,OM,2
+Transition,R02,R02_07,OM,9
+Transition,R02,R02_08,Dicran,10
+Transition,R02,R02_09,Dicran,3
+Transition,R02,R02_10,Cush,3
+Transition,R03,R03_01,Dicran,11
+Transition,R03,R03_02,SPMA,5
+Transition,R03,R03_03,SPMA,16
+Transition,R03,R03_04,Cush,5
+Transition,R03,R03_05,SPMA,4
+Transition,R03,R03_06,OM,17
+Transition,R03,R03_07,Dicran,44
+Transition,R03,R03_08,OM,10
+Transition,R03,R03_09,Dicran,4
+Transition,R03,R03_10,Dicran,4
+Transition,R04,R04_01,SPMA,18
+Transition,R04,R04_02,Cush,6
+Transition,R04,R04_03,Dicran,5
+Transition,R04,R04_04,Cush,15
+Transition,R04,R04_05,Cush,2
+Transition,R04,R04_06,Dicran,5
+Transition,R04,R04_07,Dicran,10
+Transition,R04,R04_08,Dicran,5
+Transition,R04,R04_09,Dicran,17
+Transition,R04,R04_10,Dicran,33
+Transition,R05,R05_01,Dicran,37
+Transition,R05,R05_02,Dicran,12
+Transition,R05,R05_03,Dicran,38
+Transition,R05,R05_04,SPMA,17
+Transition,R05,R05_05,SPMA,10
+Transition,R05,R05_06,SPMA,7
+Transition,R05,R05_07,Dicran,9
+Transition,R05,R05_08,SPMA,33
+Transition,R05,R05_09,SPMA,65
+Transition,R05,R05_10,SPMA,5
+Transition,R06,R06_01,Dicran,10
+Transition,R06,R06_02,Dicran,10
+Transition,R06,R06_03,Cush,5
+Transition,R06,R06_04,OM,3
+Transition,R06,R06_05,Cush,8
+Transition,R06,R06_06,Dicran,27
+Transition,R06,R06_07,Cush,7
+Transition,R06,R06_08,Dicran,16
+Transition,R06,R06_09,Cush,5
+Transition,R06,R06_10,OM,7
+Transition,R07,R07_01,Dicran,26
+Transition,R07,R07_02,Cush,7
+Transition,R07,R07_03,Dicran,5
+Transition,R07,R07_04,Cush,2
+Transition,R07,R07_05,Dicran,19
+Transition,R07,R07_06,OM,5
+Transition,R07,R07_07,Dicran,45
+Transition,R07,R07_08,OM,32
+Transition,R07,R07_09,OM,9
+Transition,R07,R07_10,SPMA,23
+Transition,R08,R08_01,Cush,4
+Transition,R08,R08_02,Cush,4
+Transition,R08,R08_03,Cush,7
+Transition,R08,R08_04,Dicran,8
+Transition,R08,R08_05,Dicran,9
+Transition,R08,R08_06,Cush,17
+Transition,R08,R08_07,Cush,3
+Transition,R08,R08_08,OM,7
+Transition,R08,R08_09,Dicran,23
+Transition,R08,R08_10,Dicran,26
+Transition,R09,R09_01,Pool,-4
+Transition,R09,R09_02,OM,6
+Transition,R09,R09_03,Cush,8
+Transition,R09,R09_04,SPMA,20
+Transition,R09,R09_05,SPMA,10
+Transition,R09,R09_06,SPMA,10
+Transition,R09,R09_07,OM,16
+Transition,R09,R09_08,Dicran,13
+Transition,R09,R09_09,OM,3
+Transition,R09,R09_10,OM,4
+Burned Forest,S01,S01_01,SPMA,36
+Burned Forest,S01,S01_02,Trunk,15
+Burned Forest,S01,S01_03,Pool,-4
+Burned Forest,S01,S01_04,Pool,-4
+Burned Forest,S01,S01_05,SPMA,8
+Burned Forest,S01,S01_06,SPMA,32
+Burned Forest,S01,S01_07,OM,13
+Burned Forest,S01,S01_08,Trunk,108
+Burned Forest,S01,S01_09,Dicran,54
+Burned Forest,S01,S01_10,OM,10
+Burned Forest,S02,S02_01,SPMA,32
+Burned Forest,S02,S02_02,SPMA,29
+Burned Forest,S02,S02_03,SPMA,30
+Burned Forest,S02,S02_04,SPMA,30
+Burned Forest,S02,S02_05,SPMA,37
+Burned Forest,S02,S02_06,SPMA,48
+Burned Forest,S02,S02_07,SPMA,35
+Burned Forest,S02,S02_08,SPMA,34
+Burned Forest,S02,S02_09,SPMA,44
+Burned Forest,S02,S02_10,SPMA,30
+Burned Forest,S03,S03_01,SPMA,20
+Burned Forest,S03,S03_02,SPMA,15
+Burned Forest,S03,S03_03,SPMA,19
+Burned Forest,S03,S03_04,SPMA,23
+Burned Forest,S03,S03_05,SPMA,16
+Burned Forest,S03,S03_06,SPMA,23
+Burned Forest,S03,S03_07,SPMA,28
+Burned Forest,S03,S03_08,SPMA,16
+Burned Forest,S03,S03_09,SPMA,19
+Burned Forest,S03,S03_10,SPMA,27
+Burned Forest,S04,S04_01,SPMA,44
+Burned Forest,S04,S04_02,SPMA,23
+Burned Forest,S04,S04_03,SPMA,27
+Burned Forest,S04,S04_04,SPMA,44
+Burned Forest,S04,S04_05,SPMA,27
+Burned Forest,S04,S04_06,SPMA,32
+Burned Forest,S04,S04_07,SPMA,26
+Burned Forest,S04,S04_08,SPMA,28
+Burned Forest,S04,S04_09,SPMA,35
+Burned Forest,S04,S04_10,SPMA,33
+Burned Forest,S05,S05_01,SPMA,37
+Burned Forest,S05,S05_02,SPMA,38
+Burned Forest,S05,S05_03,SPMA,42
+Burned Forest,S05,S05_04,SPMA,40
+Burned Forest,S05,S05_05,SPMA,37
+Burned Forest,S05,S05_06,SPMA,45
+Burned Forest,S05,S05_07,SPMA,23
+Burned Forest,S05,S05_08,SPMA,44
+Burned Forest,S05,S05_09,SPMA,40
+Burned Forest,S05,S05_10,SPMA,32
+Burned Forest,S06,S06_01,SPMA,42
+Burned Forest,S06,S06_02,SPMA,30
+Burned Forest,S06,S06_03,SPMA,42
+Burned Forest,S06,S06_04,SPMA,43
+Burned Forest,S06,S06_05,SPMA,24
+Burned Forest,S06,S06_06,SPMA,55
+Burned Forest,S06,S06_07,OM,10
+Burned Forest,S06,S06_08,SPMA,20
+Burned Forest,S06,S06_09,SPMA,26
+Burned Forest,S06,S06_10,SPMA,23
+Burned Forest,S07,S07_01,SPMA,40
+Burned Forest,S07,S07_02,SPMA,28
+Burned Forest,S07,S07_03,SPMA,33
+Burned Forest,S07,S07_04,SPMA,40
+Burned Forest,S07,S07_05,SPMA,50
+Burned Forest,S07,S07_06,SPMA,25
+Burned Forest,S07,S07_07,SPMA,50
+Burned Forest,S07,S07_08,SPMA,40
+Burned Forest,S07,S07_09,SPMA,47
+Burned Forest,S07,S07_10,SPMA,30
+Burned Forest,S08,S08_01,SPMA,27
+Burned Forest,S08,S08_02,SPMA,25
+Burned Forest,S08,S08_03,SPMA,21
+Burned Forest,S08,S08_04,SPMA,32
+Burned Forest,S08,S08_05,SPMA,30
+Burned Forest,S08,S08_06,SPMA,28
+Burned Forest,S08,S08_07,SPMA,31
+Burned Forest,S08,S08_08,SPMA,37
+Burned Forest,S08,S08_09,SPMA,32
+Burned Forest,S08,S08_10,SPMA,36
+Burned Forest,S09,S09_01,SPMA,32
+Burned Forest,S09,S09_02,SPMA,44
+Burned Forest,S09,S09_03,SPMA,33
+Burned Forest,S09,S09_04,SPMA,21
+Burned Forest,S09,S09_05,SPMA,30
+Burned Forest,S09,S09_06,SPMA,31
+Burned Forest,S09,S09_07,SPMA,45
+Burned Forest,S09,S09_08,SPMA,23
+Burned Forest,S09,S09_09,SPMA,35
+Burned Forest,S09,S09_10,SPMA,28
