@@ -7,9 +7,12 @@ library(lme4)
 library(rstanarm)
 library(dplyr)
 library(bayesplot)
+library(shinystan)
+library(ggplot2)
 library(here)
 bayesplot_theme_set(bayesplot::theme_default())
-options(mc.cores = parallel::detectCores() - 1)
+options(mc.cores = parallel::detectCores(logical = FALSE) - 1)
+if(.Platform$OS.type == "windows") options(device = windows)
 
 
 #############################################################################
@@ -47,73 +50,72 @@ vignette("priors", package = 'rstanarm')
 # and add. rings = 0 for each basal CS.
 harv_glmer <- stan_glmer(AddRings ~ Height_RC + Height_RC:Patch + (-1 + Height_RC | Sapling), 
                          data = harv, family = poisson(link = "identity"), 
-                         iter = 2000) 
-
-# errors @ inter = default of 2000: 
-# Warning messages: 
-#1: Bulk Effective Samples Size (ESS) is too low, 
-# indicating posterior means and medians may be unreliable.
-# Running the chains for more iterations may help. See http://mc-stan.org/misc/warnings.html#bulk-ess 
-# 2: Tail Effective Samples Size (ESS) is too low, indicating posterior variances 
-# and tail quantiles may be unreliable. Running the chains for more iterations may help. 
-# See http://mc-stan.org/misc/warnings.html#tail-ess
-
-# Time for iter = 3000; 18:08 - 18:49; only got the 1st of the above errors; 
-# summary is the same; removing outliers didn't change the results.
+                         chains = getOption("mc.cores"), iter = 3000, warmup = 1000) 
 
 prior_summary(harv_glmer)
 print(harv_glmer, digits=3)
+summary(harv_glmer)
+cbind(rstan::get_elapsed_time(harv_glmer$stanfit), 
+      total = rowSums(rstan::get_elapsed_time(harv_glmer$stanfit)))
 
+# Marginal posterior predictive density
 yrep_harv <- posterior_predict(harv_glmer)
-n_sims <- nrow(yrep_harv)
-subset <-sample(n_sims, 100)
-ppc_dens_overlay(harv$AddRings, yrep_harv)
+indx <- sample(nrow(yrep_harv), 100)
+ppc_dens_overlay(harv$AddRings, yrep_harv[indx,])
 
-?posterior_predict
-?ppc_dens_overlay
+# Marginal posterior predictive density grouped by patch
+ppc_dens_overlay_grouped(harv$AddRings, yrep_harv[indx,], group = harv$Patch)
 
+# Posterior predictive densities as a function of height and patch
+# Use "new" level of grouping factor so PPD marginalizes over tree-level variance
+# (predictions are for a "random tree")
+newdata <- expand.grid(AddRings = 0, Height_RC = 1:round(max(harv$Height_RC),-1), 
+                       Patch = unique(harv$Patch), Sapling = "0")  
+ynew <- posterior_predict(harv_glmer, newdata = newdata, re.form = NA)
 
-# Predict outcome (additional ring counts) for new values of predictors 
-# (height, patch, sapling)
+###############################################################################
+# Predict outcome (additional ring counts) for cored trees 
+###############################################################################
 
 cores <- read.csv(here("data","PIUV_CoredProcessed.csv"), header = TRUE)
 
-#select & mutate predictor columns to match those used in the model
-cores.nd <- cores %>%
-  filter(Patch2 != "Cushion") %>% #remove cores from Cushion patch
+# select & mutate predictor columns to match those used in the model
+cores_nd <- cores %>%
+  filter(Patch2 != "Cushion") %>% # remove cores from Cushion patch
   select(Patch2, Individual, Cor_Height_cm) %>%
   mutate(Patch = Patch2, Sapling = Individual, Height_RC = Cor_Height_cm, .keep = "unused")
 
-colnames(cores.nd)
-dim(cores.nd)
+colnames(cores_nd)
+dim(cores_nd)
 
-ynew <- posterior_predict (harv_glmer, newdata=cores.nd)
-
+ppd_cores <- posterior_predict(harv_glmer, newdata = cores_nd)
 
 
 ###############################################################################
+# FIGURES
+###############################################################################
 
-###plots
-
+# Additional rings vs. height, all data
 plot(harv$Height_RC, harv$AddRings)
 
+# Additional rings vs. height, grouped by patch
 harv %>% ggplot(aes(Height_RC, AddRings)) +
   geom_point() + 
   facet_grid(Patch~.) + theme_bw() +
   xlab("Height on Stem (cm)") + ylab("No. Additional Rings")
 
 
-#Scatterplots AddRings ~ Height on Stem, patch, symbolized by sapling
+# Scatterplots AddRings ~ Height on Stem, patch, symbolized by sapling
 harv %>% filter(Patch=="Forest") %>%
 ggplot(aes(Height_RC, AddRings)) + geom_point(aes(color=Sapling)) +
   xlab("Height on Stem (cm)") + ylab("No. Add. Rings to Base")
 
-#Scatterplots AddRings ~ Height on Stem, plot, symbolized by sapling
+# Scatterplots AddRings ~ Height on Stem, plot, symbolized by sapling
 harv %>% filter(Plot=="BF03") %>%
   ggplot(aes(Height_RC, AddRings)) + geom_point(aes(color=Sapling)) +
   xlab("Height on Stem (cm)") + ylab("No. Add. Rings to Base")
 
-#log(AddRings)
+# log(AddRings)
 harv_log <- harv %>% filter(AddRings>0) %>%
   mutate(AddRings_log = log(AddRings))
 
@@ -152,7 +154,7 @@ subset <-sample(n_sims, 100)
 ppc_dens_overlay(harv$AddRings, yrep_2)
 
 
-#link = identity, patch as random effect
+#link = identity, patch as fixed effect
 poi3 <- stan_glm(AddRings ~ Height_RC + Height_RC:Patch, family = poisson(link="identity"), data = harv)
 print(poi3, digit=3)
 
