@@ -3,65 +3,136 @@
 library(mlmRev)#for use in mlm tutorial (https://mc-stan.org/users/documentation/case-studies/tutorial_rstanarm.html)
 library(lme4)
 library(rstanarm)
-library(ggplot2)
+library(tidyverse)
 library(bayesplot)
 theme_set(bayesplot::theme_default())
 
 
-### tutorial: 
-data(Gcsemv, package = "mlmRev")
-summary(Gcsemv)
-
-# Make Male the reference category and rename variable
-Gcsemv$female <- relevel(Gcsemv$gender, "M")
-
-
-# Use only total score on coursework paper 
-GCSE <- subset(x = Gcsemv, 
-               select = c(school, student, female, course))
-
-# Count unique schools and students
-J <- length(unique(GCSE$school))
-N <- nrow(GCSE)
-
-# Check structure of data frame
-str(GCSE)
-
-#varying intercept and slope with single predictor
-M3 <- lmer(formula = course ~ 1 + female + (1 + female | school), 
-           data = GCSE, 
-           REML = FALSE)
-summary(M3) 
-
-#using stan to do above
-M3_stanlmer <- stan_lmer(formula = course ~ female + (1 + female | school), 
-                         data = GCSE,
-                         seed = 349)
-
-prior_summary(object = M3_stanlmer)
-
-M3_stanlmer
-
-
-?stan_glmer
-
-
 #############################################################################
 
+##Poisson GLMM
 
-# Data:  harvested PIUV from all patches; pot_outlier = 1 if had been removed based on linear regressions and/or abnormal ring counts in consecutive rounds.
+# Data:  harvested PIUV from all patches; pot_outlier = 1 if had been removed when fitting linear regressions and/or given abnormal ring counts in consecutive rounds.
 
-#Re Bog forest outliers:  For linear regression, had removed BF0802 entirely [9 cross sections] due to nonlinear growth pattern that differs from the rest of the harvested trees.  It’s also one of the older BF trees. Removed cross-sections 06, 05 and 04 from BF0902 (bc ring counts of 92, 91, 90 and 90 in a row and notes re 04 being rotten and may want to leave out). Removed ff bc high on stem and no cross sections in between:  BF0303_110to112, BF0305_100to102. Removed BF0202 [5 cross sections]. Removed BF0301_110to112.
+#Re Bog forest outliers:  For linear regressions, had removed BF0802 entirely [9 cross sections] due to nonlinear growth pattern that differs from the rest of the harvested trees.  It’s also one of the older BF trees. Removed cross-sections 06, 05 and 04 from BF0902 (bc ring counts of 92, 91, 90 and 90 in a row and notes re 04 being rotten and may want to leave out). Removed ff bc high on stem and no cross sections in between:  BF0303_110to112, BF0305_100to102. Removed BF0202 [5 cross sections]. Removed BF0301_110to112.
 
 help(priors, package = 'rstanarm')  #The poisson family function defaults to using the log link
 
 vignette("priors", package = 'rstanarm')
+
 
 harv <- read.csv("C:/Users/Marsh Hawk Zaret/Documents/Big_D/Data_Analysis/RQ1v2_PIUVestab/Data/RC_Height_cross_sections.csv", header = TRUE)
 
 colnames(harv)
 head(harv)
 
-harv_glmer <- stan_glmer(formula = AddRings ~ Height_RC + Height_RC:Patch + (-1 + Height_RC | Sapling), data = harv, family = poisson(link = "identity")) #model includes intercept for fixed effects, but no intercept for random effect of individual harvested tree.  Note:  could add dummy data such that each tree has a basal CS (height = 0) and add. rings = 0 for each basal CS.
+harv_glmer <- stan_glmer(formula = AddRings ~ Height_RC + Height_RC:Patch + (-1 + Height_RC | Sapling), data = harv, family = poisson(link = "identity"), iter=2000) #model includes intercept for fixed effects, but no intercept for random effect of individual harvested tree.  Note:  could add dummy data such that each tree has a basal CS (height = 0) and add. rings = 0 for each basal CS.
+
+#errors @ inter = default of 2000: Warning messages: #1: Bulk Effective Samples Size (ESS) is too low, indicating posterior means and medians may be unreliable.Running the chains for more iterations may help. See http://mc-stan.org/misc/warnings.html#bulk-ess 
+#2: Tail Effective Samples Size (ESS) is too low, indicating posterior variances and tail quantiles may be unreliable. Running the chains for more iterations may help. See http://mc-stan.org/misc/warnings.html#tail-ess
+
+#Time for iter = 3000; 18:08 - 18:49; only got the 1st of the above errors; summary is the same; removing outliers didn't change the results.
 
 prior_summary(harv_glmer)
+
+print(harv_glmer, digits=3)
+
+yrep_harv <- posterior_predict(harv_glmer)
+n_sims <- nrow(yrep_harv)
+subset <-sample(n_sims, 100)
+ppc_dens_overlay(harv$AddRings, yrep_harv)
+
+?posterior_predict
+?ppc_dens_overlay
+
+
+#Predict outcome (additional ring counts) for new values of predictors (height, patch, sapling)
+
+cores <- read.csv("C:/Users/Marsh Hawk Zaret/Documents/Big_D/Data_Analysis/RQ1v2_PIUVestab/Data/PIUV_CoredProcessed.csv", header = TRUE)
+
+#select & mutate predictor columns to match those used in the model
+cores.nd <- cores %>%
+  filter(Patch2 != "Cushion") %>% #remove cores from Cushion patch
+  select(Patch2, Individual, Cor_Height_cm) %>%
+  mutate(Patch = Patch2, Sapling = Individual, Height_RC = Cor_Height_cm, .keep = "unused")
+
+colnames(cores.nd)
+dim(cores.nd)
+
+ynew <- posterior_predict (harv_glmer, newdata=cores.nd)
+
+
+
+###############################################################################
+
+###plots
+
+plot(harv$Height_RC, harv$AddRings)
+
+harv %>% ggplot(aes(Height_RC, AddRings)) +
+  geom_point() + 
+  facet_grid(Patch~.) + theme_bw() +
+  xlab("Height on Stem (cm)") + ylab("No. Additional Rings")
+
+
+#Scatterplots AddRings ~ Height on Stem, patch, symbolized by sapling
+harv %>% filter(Patch=="Forest") %>%
+ggplot(aes(Height_RC, AddRings)) + geom_point(aes(color=Sapling)) +
+  xlab("Height on Stem (cm)") + ylab("No. Add. Rings to Base")
+
+#Scatterplots AddRings ~ Height on Stem, plot, symbolized by sapling
+harv %>% filter(Plot=="BF03") %>%
+  ggplot(aes(Height_RC, AddRings)) + geom_point(aes(color=Sapling)) +
+  xlab("Height on Stem (cm)") + ylab("No. Add. Rings to Base")
+
+#log(AddRings)
+harv_log <- harv %>% filter(AddRings>0) %>%
+  mutate(AddRings_log = log(AddRings))
+
+head(harv_log)
+
+harv_log %>% filter(Plot=="F03") %>%
+  ggplot(aes(Height_RC, AddRings_log)) + geom_point(aes(color=Sapling)) +
+  xlab("Height on Stem (cm)") + ylab("No. Add. Rings to Base")
+
+################################################################################
+
+###Poisson GLMs
+
+#link = log
+poi1 <- stan_glm(AddRings ~ Height_RC, family = poisson(link="log"), data = harv)
+print(poi1, digit=3)
+
+plot(harv$Height_RC, harv$AddRings)
+curve(exp(coef(poi1)[1] + coef(poi1)[2]*x), add=TRUE)
+
+yrep_1 <- posterior_predict(poi1)
+n_sims <- nrow(yrep_1)
+subset <-sample(n_sims, 100)
+ppc_dens_overlay(harv$AddRings, yrep_1)
+
+#link = identity
+poi2 <- stan_glm(AddRings ~ Height_RC, family = poisson(link="identity"), data = harv)
+print(poi2, digit=3)
+
+plot(harv$Height_RC, harv$AddRings)
+curve(coef(poi2)[1] + coef(poi2)[2]*x, add=TRUE)
+
+yrep_2 <- posterior_predict(poi2)
+n_sims <- nrow(yrep_2)
+subset <-sample(n_sims, 100)
+ppc_dens_overlay(harv$AddRings, yrep_2)
+
+
+#link = identity, patch as random effect
+poi3 <- stan_glm(AddRings ~ Height_RC + Height_RC:Patch, family = poisson(link="identity"), data = harv)
+print(poi3, digit=3)
+
+plot(harv$Height_RC, harv$AddRings)
+curve(coef(poi2)[1] + coef(poi2)[2]*x, add=TRUE)
+
+yrep_2 <- posterior_predict(poi2)
+n_sims <- nrow(yrep_2)
+subset <-sample(n_sims, 100)
+ppc_dens_overlay(harv$AddRings, yrep_2)
+
