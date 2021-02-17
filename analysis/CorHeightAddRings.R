@@ -3,8 +3,9 @@
 library(mlmRev)#for use in mlm tutorial (https://mc-stan.org/users/documentation/case-studies/tutorial_rstanarm.html)
 library(lme4)
 library(rstanarm)
-library(tidyverse)
+library(dplyr)
 library(bayesplot)
+library(here)
 theme_set(bayesplot::theme_default())
 
 
@@ -21,7 +22,7 @@ help(priors, package = 'rstanarm')  #The poisson family function defaults to usi
 vignette("priors", package = 'rstanarm')
 
 
-harv <- read.csv("C:/Users/Marsh Hawk Zaret/Documents/Big_D/Data_Analysis/RQ1v2_PIUVestab/Data/RC_Height_cross_sections.csv", header = TRUE)
+harv <- read.csv(here("data","RC_Height_cross_sections.csv"), header = TRUE)
 
 colnames(harv)
 head(harv)
@@ -48,7 +49,7 @@ ppc_dens_overlay(harv$AddRings, yrep_harv)
 
 #Predict outcome (additional ring counts) for new values of predictors (height, patch, sapling)
 
-cores <- read.csv("C:/Users/Marsh Hawk Zaret/Documents/Big_D/Data_Analysis/RQ1v2_PIUVestab/Data/PIUV_CoredProcessed.csv", header = TRUE)
+cores <- read.csv(here("data","PIUV_CoredProcessed.csv"), header = TRUE)
 
 #select & mutate predictor columns to match those used in the model
 cores.nd <- cores %>%
