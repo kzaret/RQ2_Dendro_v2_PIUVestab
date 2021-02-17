@@ -8,7 +8,8 @@ library(rstanarm)
 library(dplyr)
 library(bayesplot)
 library(here)
-theme_set(bayesplot::theme_default())
+bayesplot_theme_set(bayesplot::theme_default())
+options(mc.cores = parallel::detectCores() - 1)
 
 
 #############################################################################
@@ -31,21 +32,22 @@ theme_set(bayesplot::theme_default())
 # BF0303_110to112, BF0305_100to102. Removed BF0202 [5 cross sections]. 
 # Removed BF0301_110to112.
 
-# The poisson family function defaults to using the log link
-help(priors, package = 'rstanarm')  
-vignette("priors", package = 'rstanarm')
-
 harv <- read.csv(here("data","RC_Height_cross_sections.csv"), header = TRUE)
 
 colnames(harv)
 head(harv)
+
+# The poisson family function defaults to using the log link
+help(priors, package = 'rstanarm')  
+vignette("priors", package = 'rstanarm')
 
 # Model includes intercept for fixed effects, 
 # but no intercept for random effect of individual harvested tree.  
 # Note:  could add dummy data such that each tree has a basal CS (height = 0) 
 # and add. rings = 0 for each basal CS.
 harv_glmer <- stan_glmer(AddRings ~ Height_RC + Height_RC:Patch + (-1 + Height_RC | Sapling), 
-                         data = harv, family = poisson(link = "identity"), iter = 2000) 
+                         data = harv, family = poisson(link = "identity"), 
+                         iter = 2000) 
 
 # errors @ inter = default of 2000: 
 # Warning messages: 
