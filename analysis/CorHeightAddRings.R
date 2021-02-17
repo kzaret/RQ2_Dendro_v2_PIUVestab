@@ -1,6 +1,8 @@
-### Coring height corrections:  regressions of ring counts on height along stem for harvested cross section.  To be used to estimate rings not captured due to coring height of cores.
+### Coring height corrections:  
+# regressions of ring counts on height along stem for harvested cross section.  
+# To be used to estimate rings not captured due to coring height of cores.
 
-library(mlmRev)#for use in mlm tutorial (https://mc-stan.org/users/documentation/case-studies/tutorial_rstanarm.html)
+library(mlmRev) # for mlm tutorial (https://mc-stan.org/users/documentation/case-studies/tutorial_rstanarm.html)
 library(lme4)
 library(rstanarm)
 library(dplyr)
@@ -11,31 +13,53 @@ theme_set(bayesplot::theme_default())
 
 #############################################################################
 
-##Poisson GLMM
+## Poisson GLMM
 
-# Data:  harvested PIUV from all patches; pot_outlier = 1 if had been removed when fitting linear regressions and/or given abnormal ring counts in consecutive rounds.
+# Data:  
+# harvested PIUV from all patches
+# pot_outlier = 1 if had been removed when fitting linear regressions and/or 
+# given abnormal ring counts in consecutive rounds.
 
-#Re Bog forest outliers:  For linear regressions, had removed BF0802 entirely [9 cross sections] due to nonlinear growth pattern that differs from the rest of the harvested trees.  It’s also one of the older BF trees. Removed cross-sections 06, 05 and 04 from BF0902 (bc ring counts of 92, 91, 90 and 90 in a row and notes re 04 being rotten and may want to leave out). Removed ff bc high on stem and no cross sections in between:  BF0303_110to112, BF0305_100to102. Removed BF0202 [5 cross sections]. Removed BF0301_110to112.
+# Re Bog forest outliers:  
+# For linear regressions, had removed BF0802 entirely [9 cross sections] due to 
+# nonlinear growth pattern that differs from the rest of the harvested trees.  
+# It’s also one of the older BF trees. 
+# Removed cross-sections 06, 05 and 04 from BF0902 
+# (bc ring counts of 92, 91, 90 and 90 in a row and notes re 04 being rotten 
+# and may want to leave out). 
+# Removed ff bc high on stem and no cross sections in between:  
+# BF0303_110to112, BF0305_100to102. Removed BF0202 [5 cross sections]. 
+# Removed BF0301_110to112.
 
-help(priors, package = 'rstanarm')  #The poisson family function defaults to using the log link
-
+# The poisson family function defaults to using the log link
+help(priors, package = 'rstanarm')  
 vignette("priors", package = 'rstanarm')
-
 
 harv <- read.csv(here("data","RC_Height_cross_sections.csv"), header = TRUE)
 
 colnames(harv)
 head(harv)
 
-harv_glmer <- stan_glmer(formula = AddRings ~ Height_RC + Height_RC:Patch + (-1 + Height_RC | Sapling), data = harv, family = poisson(link = "identity"), iter=2000) #model includes intercept for fixed effects, but no intercept for random effect of individual harvested tree.  Note:  could add dummy data such that each tree has a basal CS (height = 0) and add. rings = 0 for each basal CS.
+# Model includes intercept for fixed effects, 
+# but no intercept for random effect of individual harvested tree.  
+# Note:  could add dummy data such that each tree has a basal CS (height = 0) 
+# and add. rings = 0 for each basal CS.
+harv_glmer <- stan_glmer(AddRings ~ Height_RC + Height_RC:Patch + (-1 + Height_RC | Sapling), 
+                         data = harv, family = poisson(link = "identity"), iter = 2000) 
 
-#errors @ inter = default of 2000: Warning messages: #1: Bulk Effective Samples Size (ESS) is too low, indicating posterior means and medians may be unreliable.Running the chains for more iterations may help. See http://mc-stan.org/misc/warnings.html#bulk-ess 
-#2: Tail Effective Samples Size (ESS) is too low, indicating posterior variances and tail quantiles may be unreliable. Running the chains for more iterations may help. See http://mc-stan.org/misc/warnings.html#tail-ess
+# errors @ inter = default of 2000: 
+# Warning messages: 
+#1: Bulk Effective Samples Size (ESS) is too low, 
+# indicating posterior means and medians may be unreliable.
+# Running the chains for more iterations may help. See http://mc-stan.org/misc/warnings.html#bulk-ess 
+# 2: Tail Effective Samples Size (ESS) is too low, indicating posterior variances 
+# and tail quantiles may be unreliable. Running the chains for more iterations may help. 
+# See http://mc-stan.org/misc/warnings.html#tail-ess
 
-#Time for iter = 3000; 18:08 - 18:49; only got the 1st of the above errors; summary is the same; removing outliers didn't change the results.
+# Time for iter = 3000; 18:08 - 18:49; only got the 1st of the above errors; 
+# summary is the same; removing outliers didn't change the results.
 
 prior_summary(harv_glmer)
-
 print(harv_glmer, digits=3)
 
 yrep_harv <- posterior_predict(harv_glmer)
@@ -47,7 +71,8 @@ ppc_dens_overlay(harv$AddRings, yrep_harv)
 ?ppc_dens_overlay
 
 
-#Predict outcome (additional ring counts) for new values of predictors (height, patch, sapling)
+# Predict outcome (additional ring counts) for new values of predictors 
+# (height, patch, sapling)
 
 cores <- read.csv(here("data","PIUV_CoredProcessed.csv"), header = TRUE)
 
