@@ -41,8 +41,6 @@ if(.Platform$OS.type == "windows") options(device = windows)
 # Removed BF0301_110to112.
 
 harv <- read.csv(here("data","RC_Height_cross_sections.csv"), header = TRUE)
-colnames(harv)
-head(harv)
 
 # The poisson family function defaults to using the log link
 help(priors, package = 'rstanarm')  
@@ -137,7 +135,7 @@ plot(harv$Height_RC, harv$AddRings)
 
 # Additional rings vs. height, grouped by patch
 # Overlay posterior distribution (median and 95% credible interval) of linear predictor
-save_plot <- FALSE
+save_plot <- TRUE
 if(save_plot) {
   png(filename=here("analysis", "results", "harv_GLMM_fits.png"),
                   width=7, height=7, units="in", res=300, type="cairo-png")
