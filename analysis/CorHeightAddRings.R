@@ -70,6 +70,14 @@ ppc_dens_overlay(harv$AddRings, yrep_harv[indx,])
 # Marginal posterior predictive density grouped by patch
 ppc_dens_overlay_grouped(harv$AddRings, yrep_harv[indx,], group = harv$Patch)
 
+# Normal QQ plot of tree-level random slope point estimates, grouped by patch
+grp_slopes <- as.matrix(harv_glmer, regex_pars = "b")
+
+colMedians(grp_slopes) %>% data.frame() %>% setNames("slope") %>% 
+  mutate(Patch = factor(tapply(harv$Patch, harv$Sapling, unique))) %>% 
+  ggplot(aes(sample = slope)) + stat_qq(size = 2) + geom_qq_line() +
+  theme_bw() + facet_wrap(vars(Patch), ncol = 2)
+
 # Linear predictor (expectation) and posterior predictive density 
 # as a function of height and patch
 # Use "new" level of grouping factor so PPD marginalizes over tree-level variance
@@ -78,7 +86,7 @@ fitdata <- expand.grid(AddRings = 0, Height_RC = 1:round(max(harv$Height_RC),-1)
                        Patch = unique(harv$Patch), Sapling = "0")  
 fit_linpred <- posterior_linpred(harv_glmer, newdata = fitdata, re.form = NA)
 fit_linpred_stats <- colQuantiles(fit_linpred, probs = c(0.025, 0.5, 0.975)) %>% 
-  as.data.frame() %>% setNames(c("lo","med","up"))
+  as.data.frame() %>% rename(c(lo = `2.5%`,med = `50%`,up = `97.5%`))
   
 fit_ppd <- posterior_predict(harv_glmer, newdata = fitdata, re.form = NA)
 
