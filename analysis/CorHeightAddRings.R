@@ -121,14 +121,14 @@ save_plot <- TRUE
 if(save_plot) {
   png(filename=here("analysis", "results", "harv_GLMM_fits.png"),
                   width=7, height=7, units="in", res=300, type="cairo-png")
-} else { dev.new(width=13,height=8.5) }
+} else { dev.new() }
 
-harv %>% ggplot(aes(Height_RC, AddRings)) +
+harv %>% ggplot(aes(Height_RC, AddRings, group = Sapling)) +
   geom_ribbon(aes(ymin = lo, ymax = up), data = cbind(fitdata, fit_linpred_stats),
               fill = "lightgray", alpha = 0.7) +
   geom_line(aes(Height_RC, med), data = cbind(fitdata, fit_linpred_stats),
             color = "darkgray", lwd = 1) +
-  geom_point(shape = 16, alpha = 0.6, size = 2) + 
+  geom_line(alpha = 0.5) + geom_point(shape = 16, alpha = 0.6, size = 2) + 
   xlab("Height on stem (cm)") + ylab("Additional rings") + 
   theme_bw() + facet_wrap(vars(Patch), ncol = 2)
 
