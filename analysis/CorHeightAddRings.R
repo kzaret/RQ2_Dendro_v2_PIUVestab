@@ -70,10 +70,14 @@ ppc_dens_overlay(harv$AddRings, yrep_harv[indx,])
 # Marginal posterior predictive density grouped by patch
 ppc_dens_overlay_grouped(harv$AddRings, yrep_harv[indx,], group = harv$Patch)
 
-# Normal QQ plot of tree-level random slope point estimates, grouped by patch
-grp_slopes <- as.matrix(harv_glmer, regex_pars = "b")
+# Fitted vs. observed, grouped by patch
+ppc_scatter_avg_grouped(harv$AddRings, yrep_harv[indx,], group = harv$Patch) +
+  geom_abline(intercept = 0, slope = 1)
 
-colMedians(grp_slopes) %>% data.frame() %>% setNames("slope") %>% 
+# Normal QQ plot of tree-level random slope point estimates, grouped by patch
+grp_slope <- as.matrix(harv_glmer, regex_pars = "b")
+
+colMedians(grp_slope) %>% data.frame() %>% setNames("slope") %>% 
   mutate(Patch = factor(tapply(harv$Patch, harv$Sapling, unique))) %>% 
   ggplot(aes(sample = slope)) + stat_qq(size = 2) + geom_qq_line() +
   theme_bw() + facet_wrap(vars(Patch), ncol = 2)
