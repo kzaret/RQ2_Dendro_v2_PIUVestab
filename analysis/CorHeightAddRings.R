@@ -148,7 +148,7 @@ harv %>% ggplot(aes(Height_RC, AddRings, group = Sapling)) +
               fill = "gray", alpha = 0.5) +
   geom_line(aes(Height_RC, med), data = cbind(fitdata, fit_linpred_stats),
             color = "darkgray", lwd = 1) +
-  geom_line(alpha = 0.4) + geom_point(shape = 1, alpha = 0.6, size = 2) + 
+  geom_line(alpha = 0.4) + geom_point(shape = 1, alpha = 0.5, size = 2) + 
   xlab("Height on stem (cm)") + ylab("Additional rings") + 
   theme_bw() + facet_wrap(vars(Patch), ncol = 2)
 
