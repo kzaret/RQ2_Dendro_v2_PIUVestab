@@ -78,17 +78,33 @@ colMedians(grp_slopes) %>% data.frame() %>% setNames("slope") %>%
   ggplot(aes(sample = slope)) + stat_qq(size = 2) + geom_qq_line() +
   theme_bw() + facet_wrap(vars(Patch), ncol = 2)
 
-# Linear predictor (expectation) and posterior predictive density 
-# as a function of height and patch
+# Linear predictor (expectation) and posterior predictive density as fn of height and patch
 # Use "new" level of grouping factor so PPD marginalizes over tree-level variance
 # (predictions are for a "random tree")
+# posterior_linpred() and posterior_predict() throw an lme4-derived error if predicted
+# values go negative, so we have to add the effects of the tree-level random slopes by hand
 fitdata <- expand.grid(AddRings = 0, Height_RC = 1:round(max(harv$Height_RC),-1), 
-                       Patch = unique(harv$Patch), Sapling = "0")  
-fit_linpred <- posterior_linpred(harv_glmer, newdata = fitdata, re.form = NA)
+                       Patch = unique(harv$Patch), Sapling = "0") 
+
+# linear predictor ignoring tree-level slopes (hyper-means only)
+fit_linpred0 <- posterior_linpred(harv_glmer, newdata = fitdata, re.form = NA)
+# posterior draws of hyper-SD
+sigma_slope <- as.matrix(harv_glmer, regex_pars = "Sigma")
+# posterior draws of a random slope from the hyperdistribution
+bnew <- rnorm(nrow(sigma_slope), 0, sigma_slope)
+# add tree-level effects to hyper-mean linear predictor
+fit_linpred <- fit_linpred0 + tcrossprod(bnew, fitdata$Height_RC)
+# truncate negative predictions (approx 0.01% of total draws)
+fit_linpred <- pmax(fit_linpred, 0)
+# posterior median and credible interval of linear predictor
 fit_linpred_stats <- colQuantiles(fit_linpred, probs = c(0.025, 0.5, 0.975)) %>% 
-  as.data.frame() %>% rename(c(lo = `2.5%`,med = `50%`,up = `97.5%`))
-  
-fit_ppd <- posterior_predict(harv_glmer, newdata = fitdata, re.form = NA)
+  as.data.frame() %>% rename(c(lo = `2.5%`, med = `50%`, up = `97.5%`))
+
+# posterior predictive distribution
+fit_ppd <- matrix(rpois(length(fit_linpred), fit_linpred), nrow = nrow(fit_linpred))
+# posterior median and credible interval of posterior predictive distribution
+fit_ppd_stats <- colQuantiles(fit_ppd, probs = c(0.025, 0.5, 0.975)) %>% 
+  as.data.frame() %>% rename(c(lo = `2.5%`, med = `50%`, up = `97.5%`))
 
 #---------------------------------------------------------------------------
 # Predict outcome (additional ring counts) for cored trees 
@@ -117,7 +133,7 @@ plot(harv$Height_RC, harv$AddRings)
 
 # Additional rings vs. height, grouped by patch
 # Overlay posterior distribution (median and 95% credible interval) of linear predictor
-save_plot <- TRUE
+save_plot <- FALSE
 if(save_plot) {
   png(filename=here("analysis", "results", "harv_GLMM_fits.png"),
                   width=7, height=7, units="in", res=300, type="cairo-png")
@@ -125,10 +141,12 @@ if(save_plot) {
 
 harv %>% ggplot(aes(Height_RC, AddRings, group = Sapling)) +
   geom_ribbon(aes(ymin = lo, ymax = up), data = cbind(fitdata, fit_linpred_stats),
-              fill = "lightgray", alpha = 0.7) +
+              fill = "lightgray", alpha = 0.9) +
+  geom_ribbon(aes(ymin = lo, ymax = up), data = cbind(fitdata, fit_ppd_stats),
+              fill = "lightgray", alpha = 0.5) +
   geom_line(aes(Height_RC, med), data = cbind(fitdata, fit_linpred_stats),
             color = "darkgray", lwd = 1) +
-  geom_line(alpha = 0.5) + geom_point(shape = 16, alpha = 0.6, size = 2) + 
+  geom_line(alpha = 0.4) + geom_point(shape = 16, alpha = 0.5, size = 2) + 
   xlab("Height on stem (cm)") + ylab("Additional rings") + 
   theme_bw() + facet_wrap(vars(Patch), ncol = 2)
 
