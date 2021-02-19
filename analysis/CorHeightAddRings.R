@@ -2,9 +2,9 @@
 # regressions of ring counts on height along stem for harvested cross section.  
 # To be used to estimate rings not captured due to coring height of cores.
 
-#---------------------------------------------------------------------------
+#===========================================================================
 # SETUP
-#---------------------------------------------------------------------------
+#===========================================================================
 
 library(mlmRev) # for mlm tutorial (https://mc-stan.org/users/documentation/case-studies/tutorial_rstanarm.html)
 library(lme4)
@@ -19,16 +19,15 @@ bayesplot_theme_set(bayesplot::theme_default())
 options(mc.cores = parallel::detectCores(logical = FALSE) - 1)
 if(.Platform$OS.type == "windows") options(device = windows)
 
+#===========================================================================
+# DATA
+#===========================================================================
 
-#---------------------------------------------------------------------------
-# POISSON GLMM
-#---------------------------------------------------------------------------
+## Harvested PIUV from all patches
+harv <- read.csv(here("data","RC_Height_cross_sections.csv"), header = TRUE)
 
-# Data:  
-# harvested PIUV from all patches
 # pot_outlier = 1 if had been removed when fitting linear regressions and/or 
 # given abnormal ring counts in consecutive rounds.
-
 # Re Bog forest outliers:  
 # For linear regressions, had removed BF0802 entirely [9 cross sections] due to 
 # nonlinear growth pattern that differs from the rest of the harvested trees.  
@@ -40,7 +39,32 @@ if(.Platform$OS.type == "windows") options(device = windows)
 # BF0303_110to112, BF0305_100to102. Removed BF0202 [5 cross sections]. 
 # Removed BF0301_110to112.
 
-harv <- read.csv(here("data","RC_Height_cross_sections.csv"), header = TRUE)
+# Change nonzero ring counts at Height_RC==0 to zeros (affects one row)
+# Add first-differenced section height and ring counts (for V.2 of GLMM)
+harv <- harv %>% group_by(Sapling) %>% 
+  mutate(AddRings = replace(AddRings, Height_RC==0 & AddRings > 0, 0),
+         DiffHeight = Height_RC - lag(Height_RC),
+         DiffRings = lag(RC) - RC) %>% 
+  ungroup() %>% as.data.frame()
+
+## Cored PIUV from all patches
+cores <- read.csv(here("data","PIUV_CoredProcessed.csv"), header = TRUE)
+
+# select & mutate predictor columns to match those used in the model
+cores_nd <- cores %>%
+  filter(Patch2 != "Cushion") %>% # remove cores from Cushion patch
+  select(Patch2, Individual, Cor_Height_cm) %>%
+  rename(Patch = Patch2, Sapling = Individual, Height_RC = Cor_Height_cm)
+
+#===========================================================================
+# POISSON GLMM
+#===========================================================================
+
+#---------------------------------------------------------------------------
+# VERSION 1 
+# Model additional rings relative to root-shoot boundary
+# as a function of section height
+#---------------------------------------------------------------------------
 
 # The poisson family function defaults to using the log link
 help(priors, package = 'rstanarm')  
@@ -50,18 +74,18 @@ vignette("priors", package = 'rstanarm')
 # but no intercept for random effect of individual harvested tree.  
 # Note:  could add dummy data such that each tree has a basal CS (height = 0) 
 # and add. rings = 0 for each basal CS.
-harv_glmer <- stan_glmer(AddRings ~ Height_RC + Height_RC:Patch + (-1 + Height_RC | Sapling), 
-                         data = harv, family = poisson(link = "identity"), 
-                         chains = getOption("mc.cores"), iter = 3000, warmup = 1000) 
+harv_glmer1 <- stan_glmer(AddRings ~ Height_RC + Height_RC:Patch + (-1 + Height_RC | Sapling), 
+                          data = harv, family = poisson(link = "identity"), 
+                          chains = getOption("mc.cores"), iter = 3000, warmup = 1000) 
 
-prior_summary(harv_glmer)
-print(harv_glmer, digits=3)
-summary(harv_glmer)
-cbind(rstan::get_elapsed_time(harv_glmer$stanfit), 
-      total = rowSums(rstan::get_elapsed_time(harv_glmer$stanfit)))
+prior_summary(harv_glmer1)
+print(harv_glmer1, digits=3)
+summary(harv_glmer1)
+cbind(rstan::get_elapsed_time(harv_glmer1$stanfit), 
+      total = rowSums(rstan::get_elapsed_time(harv_glmer1$stanfit)))
 
 # Marginal posterior predictive density
-yrep_harv <- posterior_predict(harv_glmer)
+yrep_harv <- posterior_predict(harv_glmer1)
 indx <- sample(nrow(yrep_harv), 100)
 ppc_dens_overlay(harv$AddRings, yrep_harv[indx,])
 
@@ -73,7 +97,7 @@ ppc_scatter_avg_grouped(harv$AddRings, yrep_harv[indx,], group = harv$Patch) +
   geom_abline(intercept = 0, slope = 1)
 
 # Normal QQ plot of tree-level random slope point estimates, grouped by patch
-grp_slope <- as.matrix(harv_glmer, regex_pars = "b")
+grp_slope <- as.matrix(harv_glmer1, regex_pars = "b")
 
 colMedians(grp_slope) %>% data.frame() %>% setNames("slope") %>% 
   mutate(Patch = factor(tapply(harv$Patch, harv$Sapling, unique))) %>% 
@@ -89,9 +113,9 @@ fitdata <- expand.grid(AddRings = 0, Height_RC = 1:round(max(harv$Height_RC),-1)
                        Patch = unique(harv$Patch), Sapling = "0") 
 
 # linear predictor ignoring tree-level slopes (hyper-means only)
-fit_linpred0 <- posterior_linpred(harv_glmer, newdata = fitdata, re.form = NA)
+fit_linpred0 <- posterior_linpred(harv_glmer1, newdata = fitdata, re.form = NA)
 # posterior draws of hyper-SD
-sigma_slope <- as.matrix(harv_glmer, regex_pars = "Sigma")
+sigma_slope <- as.matrix(harv_glmer1, regex_pars = "Sigma")
 # posterior draws of a random slope from the hyperdistribution
 bnew <- rnorm(nrow(sigma_slope), 0, sigma_slope)
 # add tree-level effects to hyper-mean linear predictor
@@ -108,37 +132,14 @@ fit_ppd <- matrix(rpois(length(fit_linpred), fit_linpred), nrow = nrow(fit_linpr
 fit_ppd_stats <- colQuantiles(fit_ppd, probs = c(0.025, 0.5, 0.975)) %>% 
   as.data.frame() %>% rename(c(lo = `2.5%`, med = `50%`, up = `97.5%`))
 
-#---------------------------------------------------------------------------
-# Predict outcome (additional ring counts) for cored trees 
-#---------------------------------------------------------------------------
-
-cores <- read.csv(here("data","PIUV_CoredProcessed.csv"), header = TRUE)
-
-# select & mutate predictor columns to match those used in the model
-cores_nd <- cores %>%
-  filter(Patch2 != "Cushion") %>% # remove cores from Cushion patch
-  select(Patch2, Individual, Cor_Height_cm) %>%
-  mutate(Patch = Patch2, Sapling = Individual, Height_RC = Cor_Height_cm, .keep = "unused")
-
-colnames(cores_nd)
-dim(cores_nd)
-
-ppd_cores <- posterior_predict(harv_glmer, newdata = cores_nd)
-
-
-#---------------------------------------------------------------------------
-# FIGURES
-#---------------------------------------------------------------------------
-
-# Additional rings vs. height, all data
-plot(harv$Height_RC, harv$AddRings)
+## FIGURES
 
 # Additional rings vs. height, grouped by patch
 # Overlay posterior distribution (median and 95% credible interval) of linear predictor
 save_plot <- TRUE
 if(save_plot) {
   png(filename=here("analysis", "results", "harv_GLMM_fits.png"),
-                  width=7, height=7, units="in", res=300, type="cairo-png")
+      width=7, height=7, units="in", res=300, type="cairo-png")
 } else { dev.new() }
 
 harv %>% ggplot(aes(Height_RC, AddRings, group = Sapling)) +
@@ -153,6 +154,31 @@ harv %>% ggplot(aes(Height_RC, AddRings, group = Sapling)) +
   theme_bw() + facet_wrap(vars(Patch), ncol = 2)
 
 if(save_plot) dev.off()
+
+
+#---------------------------------------------------------------------------
+# VERSION 2 
+# Model incremental additional rings from one section to the next
+# as a function of the difference in section height
+#---------------------------------------------------------------------------
+
+
+
+
+
+#---------------------------------------------------------------------------
+# Predict outcome (additional ring counts) for cored trees 
+#---------------------------------------------------------------------------
+
+ppd_cores <- posterior_predict(harv_glmer, newdata = cores_nd)
+
+
+#===========================================================================
+# ADDITIONAL FIGURES
+#===========================================================================
+
+# Additional rings vs. height, all data
+plot(harv$Height_RC, harv$AddRings)
 
 # Scatterplots AddRings ~ Height on Stem, grouped by patch, symbolized by sapling
 harv %>% ggplot(aes(Height_RC, AddRings)) + geom_point(aes(color=Sapling)) +
@@ -174,7 +200,11 @@ harv_log %>% filter(Plot=="F03") %>%
   ggplot(aes(Height_RC, AddRings_log)) + geom_point(aes(color=Sapling)) +
   xlab("Height on Stem (cm)") + ylab("No. Add. Rings to Base")
 
-################################################################################
+
+
+#===========================================================================
+# ADDITIONAL CODE
+#===========================================================================
 
 ### Poisson GLMs
 
