@@ -26,6 +26,9 @@ if(.Platform$OS.type == "windows") options(device = windows)
 ## Harvested PIUV from all patches
 harv <- read.csv(here("data","RC_Height_cross_sections.csv"), header = TRUE)
 
+# Notes:  
+# harv includes dummy data such that each tree has a basal CS (height = 0) 
+# and add. rings = 0 for each basal CS.
 # pot_outlier = 1 if had been removed when fitting linear regressions and/or 
 # given abnormal ring counts in consecutive rounds.
 # Re Bog forest outliers:  
@@ -44,7 +47,7 @@ harv <- read.csv(here("data","RC_Height_cross_sections.csv"), header = TRUE)
 harv <- harv %>% group_by(Sapling) %>% 
   mutate(AddRings = replace(AddRings, Height_RC==0 & AddRings > 0, 0),
          DiffHeight = Height_RC - lag(Height_RC),
-         DiffRings = lag(RC) - RC) %>% 
+         DiffRings = pmax(lag(RC) - RC, 0)) %>%  # change 3 small negative values to 0
   ungroup() %>% as.data.frame()
 
 ## Cored PIUV from all patches
@@ -63,17 +66,16 @@ cores_nd <- cores %>%
 #---------------------------------------------------------------------------
 # VERSION 1 
 # Model additional rings relative to root-shoot boundary
-# as a function of section height
+# as a linear (proportional) function of section height
 #---------------------------------------------------------------------------
 
-# The poisson family function defaults to using the log link
+# The poisson family function defaults to using the log link but we need the
+# identity link to preserve the linear relationship b/w height and ring count
 help(priors, package = 'rstanarm')  
 vignette("priors", package = 'rstanarm')
 
 # Model includes intercept for fixed effects, 
 # but no intercept for random effect of individual harvested tree.  
-# Note:  could add dummy data such that each tree has a basal CS (height = 0) 
-# and add. rings = 0 for each basal CS.
 harv_glmer1 <- stan_glmer(AddRings ~ Height_RC + Height_RC:Patch + (-1 + Height_RC | Sapling), 
                           data = harv, family = poisson(link = "identity"), 
                           chains = getOption("mc.cores"), iter = 3000, warmup = 1000) 
@@ -85,15 +87,15 @@ cbind(rstan::get_elapsed_time(harv_glmer1$stanfit),
       total = rowSums(rstan::get_elapsed_time(harv_glmer1$stanfit)))
 
 # Marginal posterior predictive density
-yrep_harv <- posterior_predict(harv_glmer1)
-indx <- sample(nrow(yrep_harv), 100)
-ppc_dens_overlay(harv$AddRings, yrep_harv[indx,])
+yrep <- posterior_predict(harv_glmer1)
+indx <- sample(nrow(yrep), 100)
+ppc_dens_overlay(harv$AddRings, yrep[indx,])
 
 # Marginal posterior predictive density grouped by patch
-ppc_dens_overlay_grouped(harv$AddRings, yrep_harv[indx,], group = harv$Patch)
+ppc_dens_overlay_grouped(harv$AddRings, yrep[indx,], group = harv$Patch)
 
 # Fitted vs. observed, grouped by patch
-ppc_scatter_avg_grouped(harv$AddRings, yrep_harv[indx,], group = harv$Patch) +
+ppc_scatter_avg_grouped(harv$AddRings, yrep[indx,], group = harv$Patch) +
   geom_abline(intercept = 0, slope = 1)
 
 # Normal QQ plot of tree-level random slope point estimates, grouped by patch
@@ -158,11 +160,46 @@ if(save_plot) dev.off()
 
 #---------------------------------------------------------------------------
 # VERSION 2 
-# Model incremental additional rings from one section to the next
-# as a function of the difference in section height
+# Model the difference in ring count from one section to the next
+# as a mean (intercept) only, scaling for the difference in height
+# as a multiplicative offset (additive log-offset)
+# Implies the same proportional relationship b/w section height
+# and total additional rings as V.1: the mean DiffRing / cm is equivalent
+# to the slope w.r.t. Height_RC
+# But incremental ring counts are a priori independent; 
+# also we can use the log link (and lognormal random effects)
 #---------------------------------------------------------------------------
 
+# Intercept grouped by sapling
+harv_glmer2 <- stan_glmer(DiffRings ~ Patch + (1 | Sapling), offset = log(DiffHeight), 
+                          family = poisson(link = "log"), data = harv, na.action = na.omit,  
+                          chains = getOption("mc.cores"), iter = 2000, warmup = 1000) 
 
+prior_summary(harv_glmer2)
+print(harv_glmer2, digits=2)
+summary(harv_glmer2)
+cbind(rstan::get_elapsed_time(harv_glmer2$stanfit), 
+      total = rowSums(rstan::get_elapsed_time(harv_glmer2$stanfit)))
+
+# Marginal posterior predictive density
+yrep <- posterior_predict(harv_glmer2)
+indx <- sample(nrow(yrep), 100)
+ppc_dens_overlay(as.vector(na.omit(harv$DiffRings)), yrep[indx,])
+
+# Rootogram of marginal posterior predictive density
+ppc_rootogram(as.vector(na.omit(harv$DiffRings)), yrep[indx,])
+
+# Marginal posterior predictive density grouped by patch
+ppc_dens_overlay_grouped(as.vector(na.omit(harv$DiffRings)), yrep[indx,], 
+                         group = harv$Patch[!is.na(harv$DiffRings)])
+
+# Normal QQ plot of tree-level random intercept point estimates, grouped by patch
+grp_intercept <- as.matrix(harv_glmer2, regex_pars = "b")
+
+colMedians(grp_intercept) %>% data.frame() %>% setNames("intercept") %>% 
+  mutate(Patch = factor(tapply(harv$Patch, harv$Sapling, unique))) %>% 
+  ggplot(aes(sample = intercept)) + stat_qq(size = 2) + geom_qq_line() +
+  theme_bw() + facet_wrap(vars(Patch), ncol = 2)
 
 
 
