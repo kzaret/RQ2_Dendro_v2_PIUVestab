@@ -172,7 +172,8 @@ if(save_plot) dev.off()
 
 # Intercept grouped by sapling
 harv_glmer2 <- stan_glmer(DiffRings ~ Patch + (1 | Sapling), offset = log(DiffHeight), 
-                          family = poisson(link = "log"), data = harv, na.action = na.omit,  
+                          family = neg_binomial_2(link = "log"), 
+                          data = harv, na.action = na.omit,  
                           chains = getOption("mc.cores"), iter = 2000, warmup = 1000) 
 
 prior_summary(harv_glmer2)
@@ -181,17 +182,13 @@ summary(harv_glmer2)
 cbind(rstan::get_elapsed_time(harv_glmer2$stanfit), 
       total = rowSums(rstan::get_elapsed_time(harv_glmer2$stanfit)))
 
-# Marginal posterior predictive density
+# Histograms of data and draws from marginal PPD
 yrep <- posterior_predict(harv_glmer2)
 indx <- sample(nrow(yrep), 100)
-ppc_dens_overlay(as.vector(na.omit(harv$DiffRings)), yrep[indx,])
+ppc_hist(as.vector(na.omit(harv$DiffRings)), yrep[indx[1:3],])
 
 # Rootogram of marginal posterior predictive density
 ppc_rootogram(as.vector(na.omit(harv$DiffRings)), yrep[indx,])
-
-# Marginal posterior predictive density grouped by patch
-ppc_dens_overlay_grouped(as.vector(na.omit(harv$DiffRings)), yrep[indx,], 
-                         group = harv$Patch[!is.na(harv$DiffRings)])
 
 # Normal QQ plot of tree-level random intercept point estimates, grouped by patch
 grp_intercept <- as.matrix(harv_glmer2, regex_pars = "b")
