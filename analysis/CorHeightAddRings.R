@@ -172,7 +172,7 @@ if(save_plot) dev.off()
 
 # Intercept grouped by sapling
 harv_glmer2 <- stan_glmer(DiffRings ~ Patch + (1 | Sapling), offset = log(DiffHeight), 
-                          family = neg_binomial_2(link = "log"), 
+                          family = poisson(link = "log"), 
                           data = harv, na.action = na.omit,  
                           chains = getOption("mc.cores"), iter = 2000, warmup = 1000) 
 
@@ -189,6 +189,11 @@ ppc_hist(as.vector(na.omit(harv$DiffRings)), yrep[indx[1:3],])
 
 # Rootogram of marginal posterior predictive density
 ppc_rootogram(as.vector(na.omit(harv$DiffRings)), yrep[indx,])
+
+# Posterior predictive check; test statistic is proportion of zeros
+ppc_stat_grouped(as.vector(na.omit(harv$DiffRings)), yrep[indx,], 
+                 group = harv$Patch[!is.na(harv$DiffRings)],
+                 stat = function(x) mean(x == 0, na.rm = TRUE))
 
 # Normal QQ plot of tree-level random intercept point estimates, grouped by patch
 grp_intercept <- as.matrix(harv_glmer2, regex_pars = "b")
