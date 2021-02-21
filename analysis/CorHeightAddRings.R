@@ -185,7 +185,9 @@ cbind(rstan::get_elapsed_time(harv_glmer2$stanfit),
 ## FIGURES
 
 # Histograms of data and draws from marginal PPD
-yrep <- posterior_predict(harv_glmer2)
+# Note that the offset argument is apparently needed, 
+# contrary to help(posterior_predict)
+yrep <- posterior_predict(harv_glmer2, offset = harv_glmer2$offset)
 indx <- sample(nrow(yrep), 100)
 ppc_hist(as.vector(na.omit(harv$DiffRings)), yrep[indx[1:3],])
 
@@ -203,12 +205,14 @@ ppc_stat_grouped(as.vector(na.omit(harv$DiffRings)), yrep[indx,],
 # Posterior predictive check: dispersion
 ppc_stat_grouped(as.vector(na.omit(harv$DiffRings)), yrep[indx,], 
                  group = harv$Patch[!is.na(harv$DiffRings)], 
-                 stat = function(x) var(x)/mean(x))
+                 stat = function(x) var(x)/mean(x)) + 
+  guides(fill = guide_legend(title = "V(x)/E(x)", title.vjust = 5))
 
 # Posterior predictive check: proportion of zeros
 ppc_stat_grouped(as.vector(na.omit(harv$DiffRings)), yrep[indx,], 
                  group = harv$Patch[!is.na(harv$DiffRings)],
-                 stat = function(x) mean(x == 0))
+                 stat = function(x) mean(x == 0)) +
+  guides(fill = guide_legend(title = "Proportion zeros", title.vjust = 5))
 
 # Normal QQ plot of tree-level random intercept point estimates, grouped by patch
 grp_intercept <- as.matrix(harv_glmer2, regex_pars = "b")
@@ -230,7 +234,7 @@ harv %>% arrange(Patch, Plot, Sapling, Height_RC) %>% group_by(Sapling) %>%
   ungroup() %>% as.data.frame() %>%
   ggplot(aes(x = Sapling, y = DiffRings / DiffHeight)) +
   geom_violin(aes(x = Sapling, y = DiffRings / DiffHeight, group = Sapling), 
-              data = dat, color = "blue", fill = "blue") +
+              data = dat, color = "gray", fill = "gray", alpha = 0.8) +
   geom_point(shape = 1, alpha = 0.7) +
   xlab("Sapling") + ylab("Additional rings / cm") +
   theme_bw() + theme(axis.text.x = element_blank()) + 
