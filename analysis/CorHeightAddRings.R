@@ -86,26 +86,6 @@ summary(harv_glmer1)
 cbind(rstan::get_elapsed_time(harv_glmer1$stanfit), 
       total = rowSums(rstan::get_elapsed_time(harv_glmer1$stanfit)))
 
-# Marginal posterior predictive density
-yrep <- posterior_predict(harv_glmer1)
-indx <- sample(nrow(yrep), 100)
-ppc_dens_overlay(harv$AddRings, yrep[indx,])
-
-# Marginal posterior predictive density grouped by patch
-ppc_dens_overlay_grouped(harv$AddRings, yrep[indx,], group = harv$Patch)
-
-# Fitted vs. observed, grouped by patch
-ppc_scatter_avg_grouped(harv$AddRings, yrep[indx,], group = harv$Patch) +
-  geom_abline(intercept = 0, slope = 1)
-
-# Normal QQ plot of tree-level random slope point estimates, grouped by patch
-grp_slope <- as.matrix(harv_glmer1, regex_pars = "b")
-
-colMedians(grp_slope) %>% data.frame() %>% setNames("slope") %>% 
-  mutate(Patch = factor(tapply(harv$Patch, harv$Sapling, unique))) %>% 
-  ggplot(aes(sample = slope)) + stat_qq(size = 2) + geom_qq_line() +
-  theme_bw() + facet_wrap(vars(Patch), ncol = 2)
-
 # Linear predictor (expectation) and posterior predictive density as fn of height and patch
 # Use "new" level of grouping factor so PPD marginalizes over tree-level variance
 # (predictions are for a "random tree")
@@ -135,6 +115,26 @@ fit_ppd_stats <- colQuantiles(fit_ppd, probs = c(0.025, 0.5, 0.975)) %>%
   as.data.frame() %>% rename(c(lo = `2.5%`, med = `50%`, up = `97.5%`))
 
 ## FIGURES
+
+# Marginal posterior predictive density
+yrep <- posterior_predict(harv_glmer1)
+indx <- sample(nrow(yrep), 100)
+ppc_dens_overlay(harv$AddRings, yrep[indx,])
+
+# Marginal posterior predictive density grouped by patch
+ppc_dens_overlay_grouped(harv$AddRings, yrep[indx,], group = harv$Patch)
+
+# Fitted vs. observed, grouped by patch
+ppc_scatter_avg_grouped(harv$AddRings, yrep[indx,], group = harv$Patch) +
+  geom_abline(intercept = 0, slope = 1)
+
+# Normal QQ plot of tree-level random slope point estimates, grouped by patch
+grp_slope <- as.matrix(harv_glmer1, regex_pars = "b")
+
+colMedians(grp_slope) %>% data.frame() %>% setNames("slope") %>% 
+  mutate(Patch = factor(tapply(harv$Patch, harv$Sapling, unique))) %>% 
+  ggplot(aes(sample = slope)) + stat_qq(size = 2) + geom_qq_line() +
+  theme_bw() + facet_wrap(vars(Patch), ncol = 2)
 
 # Additional rings vs. height, grouped by patch
 # Overlay posterior distribution (median and 95% credible interval) of linear predictor
@@ -182,6 +182,8 @@ summary(harv_glmer2)
 cbind(rstan::get_elapsed_time(harv_glmer2$stanfit), 
       total = rowSums(rstan::get_elapsed_time(harv_glmer2$stanfit)))
 
+## FIGURES
+
 # Histograms of data and draws from marginal PPD
 yrep <- posterior_predict(harv_glmer2)
 indx <- sample(nrow(yrep), 100)
@@ -190,10 +192,23 @@ ppc_hist(as.vector(na.omit(harv$DiffRings)), yrep[indx[1:3],])
 # Rootogram of marginal posterior predictive density
 ppc_rootogram(as.vector(na.omit(harv$DiffRings)), yrep[indx,])
 
-# Posterior predictive check; test statistic is proportion of zeros
+# Posterior predictive check: mean
+ppc_stat_grouped(as.vector(na.omit(harv$DiffRings)), yrep[indx,], 
+                 group = harv$Patch[!is.na(harv$DiffRings)], stat = mean)
+
+# Posterior predictive check: SD
+ppc_stat_grouped(as.vector(na.omit(harv$DiffRings)), yrep[indx,], 
+                 group = harv$Patch[!is.na(harv$DiffRings)], stat = sd)
+
+# Posterior predictive check: dispersion
+ppc_stat_grouped(as.vector(na.omit(harv$DiffRings)), yrep[indx,], 
+                 group = harv$Patch[!is.na(harv$DiffRings)], 
+                 stat = function(x) var(x)/mean(x))
+
+# Posterior predictive check: proportion of zeros
 ppc_stat_grouped(as.vector(na.omit(harv$DiffRings)), yrep[indx,], 
                  group = harv$Patch[!is.na(harv$DiffRings)],
-                 stat = function(x) mean(x == 0, na.rm = TRUE))
+                 stat = function(x) mean(x == 0))
 
 # Normal QQ plot of tree-level random intercept point estimates, grouped by patch
 grp_intercept <- as.matrix(harv_glmer2, regex_pars = "b")
@@ -203,6 +218,32 @@ colMedians(grp_intercept) %>% data.frame() %>% setNames("intercept") %>%
   ggplot(aes(sample = intercept)) + stat_qq(size = 2) + geom_qq_line() +
   theme_bw() + facet_wrap(vars(Patch), ncol = 2)
 
+# Dotplots of rings/cm by sapling
+# Overlay violin plots of PPD
+dat <- data.frame(iter = rep(indx, ncol(yrep)),
+                  Patch = rep(harv_glmer2$glmod$fr$Patch, each = length(indx)),
+                  Sapling = rep(harv_glmer2$glmod$fr$Sapling, each = length(indx)),
+                  DiffHeight = rep(exp(harv_glmer2$glmod$fr[,"(offset)"]), each = length(indx)),
+                  DiffRings = as.vector(yrep[indx,]))
+
+harv %>% arrange(Patch, Plot, Sapling, Height_RC) %>% group_by(Sapling) %>% 
+  ungroup() %>% as.data.frame() %>%
+  ggplot(aes(x = Sapling, y = DiffRings / DiffHeight)) +
+  geom_violin(aes(x = Sapling, y = DiffRings / DiffHeight, group = Sapling), 
+              data = dat, color = "blue", fill = "blue") +
+  geom_point(shape = 1, alpha = 0.7) +
+  xlab("Sapling") + ylab("Additional rings / cm") +
+  theme_bw() + theme(axis.text.x = element_blank()) + 
+  facet_wrap(vars(Patch), scales = "free_x")
+
+# Scatterplot of rings/cm vs section height
+# Any residual relationship?
+harv %>% arrange(Patch, Plot, Sapling, Height_RC) %>% group_by(Sapling) %>% 
+  ungroup() %>% as.data.frame() %>%
+  ggplot(aes(x = Height_RC, y = DiffRings / DiffHeight, group = Sapling)) +
+  geom_point(shape = 1, alpha = 0.5) + geom_line(alpha = 0.4) +
+  xlab("Section height") + ylab("Additional rings / cm") +
+  theme_bw() + facet_wrap(vars(Patch), scales = "free")
 
 
 #---------------------------------------------------------------------------
