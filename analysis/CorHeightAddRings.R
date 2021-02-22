@@ -171,8 +171,9 @@ if(save_plot) dev.off()
 #---------------------------------------------------------------------------
 
 # Intercept grouped by sapling
-harv_glmer2 <- stan_glmer(DiffRings ~ Patch + (1 | Sapling), offset = log(DiffHeight), 
-                          family = poisson(link = "log"), 
+harv_glmer2 <- stan_glmer(DiffRings ~ Patch + (1 | Sapling) + (1 | Plot), 
+                          offset = log(DiffHeight), family = poisson(link = "log"),
+                          prior_aux = exponential(0.1),
                           data = harv, na.action = na.omit,  
                           chains = getOption("mc.cores"), iter = 2000, warmup = 1000) 
 
@@ -206,7 +207,7 @@ ppc_stat_grouped(as.vector(na.omit(harv$DiffRings)), yrep[indx,],
 ppc_stat_grouped(as.vector(na.omit(harv$DiffRings)), yrep[indx,], 
                  group = harv$Patch[!is.na(harv$DiffRings)], 
                  stat = function(x) var(x)/mean(x)) + 
-  guides(fill = guide_legend(title = "V(x)/E(x)", title.vjust = 5))
+  guides(fill = guide_legend(title = "V(Y)/E(Y)", title.vjust = 5))
 
 # Posterior predictive check: proportion of zeros
 ppc_stat_grouped(as.vector(na.omit(harv$DiffRings)), yrep[indx,], 
@@ -215,10 +216,20 @@ ppc_stat_grouped(as.vector(na.omit(harv$DiffRings)), yrep[indx,],
   guides(fill = guide_legend(title = "Proportion zeros", title.vjust = 5))
 
 # Normal QQ plot of tree-level random intercept point estimates, grouped by patch
-grp_intercept <- as.matrix(harv_glmer2, regex_pars = "b")
+grp_intercept <- as.data.frame(harv_glmer2, regex_pars = "Sapling:") %>% 
+  select(-contains("Sigma")) %>% as.matrix()
 
 colMedians(grp_intercept) %>% data.frame() %>% setNames("intercept") %>% 
   mutate(Patch = factor(tapply(harv$Patch, harv$Sapling, unique))) %>% 
+  ggplot(aes(sample = intercept)) + stat_qq(size = 2) + geom_qq_line() +
+  theme_bw() + facet_wrap(vars(Patch), ncol = 2)
+
+# Normal QQ plot of plot-level random intercept point estimates, grouped by patch
+grp_intercept <- as.data.frame(harv_glmer2, regex_pars = "Plot:") %>% 
+  select(-contains("Sigma")) %>% as.matrix()
+
+colMedians(grp_intercept) %>% data.frame() %>% setNames("intercept") %>% 
+  mutate(Patch = factor(tapply(harv$Patch, harv$Plot, unique))) %>% 
   ggplot(aes(sample = intercept)) + stat_qq(size = 2) + geom_qq_line() +
   theme_bw() + facet_wrap(vars(Patch), ncol = 2)
 
