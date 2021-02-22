@@ -170,25 +170,52 @@ if(save_plot) dev.off()
 # also we can use the log link (and lognormal random effects)
 #---------------------------------------------------------------------------
 
-# Intercept grouped by sapling
-harv_glmer2 <- stan_glmer(DiffRings ~ Patch + (1 | Sapling) + (1 | Plot), 
-                          offset = log(DiffHeight), family = poisson(link = "log"),
-                          prior_aux = exponential(0.1),
-                          data = harv, na.action = na.omit,  
-                          chains = getOption("mc.cores"), iter = 2000, warmup = 1000) 
+# Poisson
+# Intercept grouped by sapling and plot
+harv_glmer2_pois <- stan_glmer(DiffRings ~ Patch + (1 | Sapling) + (1 | Plot), 
+                               offset = log(DiffHeight), family = poisson(link = "log"),
+                               data = harv, na.action = na.omit,  
+                               chains = getOption("mc.cores"), iter = 3000, warmup = 1000) 
 
-prior_summary(harv_glmer2)
-print(harv_glmer2, digits=2)
-summary(harv_glmer2)
-cbind(rstan::get_elapsed_time(harv_glmer2$stanfit), 
-      total = rowSums(rstan::get_elapsed_time(harv_glmer2$stanfit)))
+prior_summary(harv_glmer2_pois)
+print(harv_glmer2_pois, digits=2)
+summary(harv_glmer2_pois)
+cbind(rstan::get_elapsed_time(harv_glmer2_pois$stanfit), 
+      total = rowSums(rstan::get_elapsed_time(harv_glmer2_pois$stanfit)))
+
+# Negative binomial
+# Intercept grouped by sapling and plot
+harv_glmer2_nb <- stan_glmer(DiffRings ~ Patch + (1 | Sapling) + (1 | Plot), 
+                             offset = log(DiffHeight), family = neg_binomial_2(link = "log"),
+                             prior_aux = exponential(0.1),
+                             data = harv, na.action = na.omit,  
+                             chains = getOption("mc.cores"), iter = 3000, warmup = 1000) 
+
+prior_summary(harv_glmer2_nb)
+print(harv_glmer2_nb, digits=2)
+summary(harv_glmer2_pois)
+cbind(rstan::get_elapsed_time(harv_glmer2_nb$stanfit), 
+      total = rowSums(rstan::get_elapsed_time(harv_glmer2_nb$stanfit)))
+
+# Compare Poisson and negative binomial models using LOO 
+# to estimate out-of-sample predictive performance
+loo_pois <- loo(harv_glmer2_pois)
+loo_pois
+
+loo_nb <- loo(harv_glmer2_nb)
+loo_nb
+
+loo_compare(loo_pois, loo_nb)
 
 ## FIGURES
+
+# Choose your fighter
+mod <- harv_glmer2_nb
 
 # Histograms of data and draws from marginal PPD
 # Note that the offset argument is apparently needed, 
 # contrary to help(posterior_predict)
-yrep <- posterior_predict(harv_glmer2, offset = harv_glmer2$offset)
+yrep <- posterior_predict(mod, offset = mod$offset)
 indx <- sample(nrow(yrep), 100)
 ppc_hist(as.vector(na.omit(harv$DiffRings)), yrep[indx[1:3],])
 
@@ -216,7 +243,7 @@ ppc_stat_grouped(as.vector(na.omit(harv$DiffRings)), yrep[indx,],
   guides(fill = guide_legend(title = "Proportion zeros", title.vjust = 5))
 
 # Normal QQ plot of tree-level random intercept point estimates, grouped by patch
-grp_intercept <- as.data.frame(harv_glmer2, regex_pars = "Sapling:") %>% 
+grp_intercept <- as.data.frame(mod, regex_pars = "Sapling:") %>% 
   select(-contains("Sigma")) %>% as.matrix()
 
 colMedians(grp_intercept) %>% data.frame() %>% setNames("intercept") %>% 
@@ -225,7 +252,7 @@ colMedians(grp_intercept) %>% data.frame() %>% setNames("intercept") %>%
   theme_bw() + facet_wrap(vars(Patch), ncol = 2)
 
 # Normal QQ plot of plot-level random intercept point estimates, grouped by patch
-grp_intercept <- as.data.frame(harv_glmer2, regex_pars = "Plot:") %>% 
+grp_intercept <- as.data.frame(mod, regex_pars = "Plot:") %>% 
   select(-contains("Sigma")) %>% as.matrix()
 
 colMedians(grp_intercept) %>% data.frame() %>% setNames("intercept") %>% 
@@ -236,9 +263,9 @@ colMedians(grp_intercept) %>% data.frame() %>% setNames("intercept") %>%
 # Dotplots of rings/cm by sapling
 # Overlay violin plots of PPD
 dat <- data.frame(iter = rep(indx, ncol(yrep)),
-                  Patch = rep(harv_glmer2$glmod$fr$Patch, each = length(indx)),
-                  Sapling = rep(harv_glmer2$glmod$fr$Sapling, each = length(indx)),
-                  DiffHeight = rep(exp(harv_glmer2$glmod$fr[,"(offset)"]), each = length(indx)),
+                  Patch = rep(mod$glmod$fr$Patch, each = length(indx)),
+                  Sapling = rep(mod$glmod$fr$Sapling, each = length(indx)),
+                  DiffHeight = rep(exp(mod$glmod$fr[,"(offset)"]), each = length(indx)),
                   DiffRings = as.vector(yrep[indx,]))
 
 harv %>% arrange(Patch, Plot, Sapling, Height_RC) %>% group_by(Sapling) %>% 
