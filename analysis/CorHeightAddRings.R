@@ -278,8 +278,7 @@ dat <- data.frame(iter = rep(indx, ncol(yrep)),
                   DiffHeight = rep(exp(mod$offset), each = length(indx)),
                   DiffRings = as.vector(yrep[indx,]))
 
-harv %>% group_by(Sapling) %>% ungroup() %>% as.data.frame() %>%
-  ggplot(aes(x = Sapling, y = DiffRings / DiffHeight)) +
+harv %>% ggplot(aes(x = Sapling, y = DiffRings / DiffHeight)) +
   geom_violin(aes(x = Sapling, y = DiffRings / DiffHeight, group = Sapling), 
               data = dat, color = "darkgray", fill = "darkgray", alpha = 0.8) +
   geom_jitter(shape = 16, alpha = 0.5, size = 1, width = 0.1, height = 0) +
@@ -292,8 +291,7 @@ if(save_plot) dev.off()
 
 # Scatterplot of rings/cm vs section height
 # Any residual relationship?
-harv %>% arrange(Patch, Plot, Sapling, Height_RC) %>% 
-  ggplot(aes(x = Height_RC, y = DiffRings / DiffHeight, group = Sapling)) +
+harv %>% ggplot(aes(x = Height_RC, y = DiffRings / DiffHeight, group = Sapling)) +
   geom_point(shape = 1, alpha = 0.5) + geom_line(alpha = 0.4) +
   xlab("Section height") + ylab("Additional rings / cm") +
   theme_bw() + facet_wrap(vars(Patch), scales = "free") + 
