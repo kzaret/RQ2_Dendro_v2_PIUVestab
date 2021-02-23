@@ -255,7 +255,7 @@ colMedians(grp_intercept) %>% data.frame() %>% setNames("intercept") %>%
   ggplot(aes(sample = intercept)) + stat_qq(size = 2) + geom_qq_line() +
   theme_bw() + facet_wrap(vars(Patch), ncol = 2) + ggtitle(mod$family$family)
 
-# Normal QQ plot of plot-level random intercept point estimates, grouped by plot
+# Normal QQ plot of plot-level random intercept point estimates, grouped by patch
 grp_intercept <- as.data.frame(mod, regex_pars = "Plot:") %>% 
   select(-contains("Sigma")) %>% as.matrix()
 
