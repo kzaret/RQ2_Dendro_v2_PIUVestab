@@ -61,83 +61,107 @@ cores_nd <- cores %>%
 
 #===========================================================================
 # COUNT GLMMs
+#
+# Model change in ring count as linear (proportional) function of height 
+# along stem
+# On log link scale, this is equivalent to an intercept plus log(height)
+# as an offset
+# Models include fixed effect of patch plus tree- and plot-level 
+# random effects on intercept
 #===========================================================================
 
-#---------------------------------------------------------------------------
-# VERSION 1 
-# Model additional rings relative to root-shoot boundary
-# as a linear (proportional) function of section height
-#---------------------------------------------------------------------------
-
-# The poisson family function defaults to using the log link but we need the
-# identity link to preserve the linear relationship b/w height and ring count
+# Info about rstanarm priors
 help(priors, package = 'rstanarm')  
 vignette("priors", package = 'rstanarm')
 
-# Model includes intercept for fixed effects, 
-# but no intercept for random effect of individual harvested tree.  
-harv_glmer1 <- stan_glmer(AddRings ~ Height_RC + Height_RC:Patch + (-1 + Height_RC | Sapling), 
-                          data = harv, family = poisson(link = "identity"), 
-                          chains = getOption("mc.cores"), iter = 3000, warmup = 1000) 
+#---------------------------------------------------------------------------
+# VERSION 1 
+# Model total additional rings relative to root-shoot boundary
+# Exclude "artificial zeros" at zero height b/c this is not a valid
+# log-offset, and zero origin is already implied by proportionality
+#---------------------------------------------------------------------------
+
+# Poisson likelihood (log link is default)
+harv_glmer1 <- stan_glmer(AddRings ~ Patch + (1 | Sapling) + (1 | Plot), 
+                          offset = log(Height_RC), family = poisson, 
+                          data = harv, subset = Height_RC > 0,
+                          chains = getOption("mc.cores"), iter = 2000, warmup = 1000) 
 
 prior_summary(harv_glmer1)
-print(harv_glmer1, digits=3)
+print(harv_glmer1, digits=2)
 summary(harv_glmer1)
 cbind(rstan::get_elapsed_time(harv_glmer1$stanfit), 
       total = rowSums(rstan::get_elapsed_time(harv_glmer1$stanfit)))
 
-# Linear predictor (expectation) and posterior predictive density as fn of height and patch
-# Use "new" level of grouping factor so PPD marginalizes over tree-level variance
-# (predictions are for a "random tree")
-# posterior_linpred() and posterior_predict() throw an lme4-derived error if predicted
-# values go negative, so we have to add the effects of the tree-level random slopes by hand
-fitdata <- expand.grid(AddRings = 0, Height_RC = 1:round(max(harv$Height_RC),-1), 
-                       Patch = unique(harv$Patch), Sapling = "0") 
-
-# linear predictor ignoring tree-level slopes (hyper-means only)
-fit_linpred0 <- posterior_linpred(harv_glmer1, newdata = fitdata, re.form = NA)
-# posterior draws of hyper-SD
-sigma_slope <- as.matrix(harv_glmer1, regex_pars = "Sigma")
-# posterior draws of a random slope from the hyperdistribution
-bnew <- rnorm(nrow(sigma_slope), 0, sigma_slope)
-# add tree-level effects to hyper-mean linear predictor
-fit_linpred <- fit_linpred0 + tcrossprod(bnew, fitdata$Height_RC)
-# truncate negative predictions (approx 0.01% of total draws)
-fit_linpred <- pmax(fit_linpred, 0)
-# posterior median and credible interval of linear predictor
-fit_linpred_stats <- colQuantiles(fit_linpred, probs = c(0.025, 0.5, 0.975)) %>% 
-  as.data.frame() %>% rename(c(lo = `2.5%`, med = `50%`, up = `97.5%`))
-
-# posterior predictive distribution
-fit_ppd <- matrix(rpois(length(fit_linpred), fit_linpred), nrow = nrow(fit_linpred))
-# posterior median and credible interval of posterior predictive distribution
-fit_ppd_stats <- colQuantiles(fit_ppd, probs = c(0.025, 0.5, 0.975)) %>% 
-  as.data.frame() %>% rename(c(lo = `2.5%`, med = `50%`, up = `97.5%`))
-
 ## FIGURES
 
-# Marginal posterior predictive density
-yrep <- posterior_predict(harv_glmer1)
+# Histograms of data and draws from marginal PPD
+# Note that the offset argument is apparently needed, 
+# contrary to help(posterior_predict)
+yrep <- posterior_predict(harv_glmer1, offset = harv_glmer1$offset)
 indx <- sample(nrow(yrep), 100)
-ppc_dens_overlay(harv$AddRings, yrep[indx,])
+ppc_hist(harv_glmer1$y, yrep[indx[1:3],]) + ggtitle(harv_glmer1$family$family)
 
-# Marginal posterior predictive density grouped by patch
-ppc_dens_overlay_grouped(harv$AddRings, yrep[indx,], group = harv$Patch)
+# Rootogram of marginal posterior predictive density
+ppc_rootogram(harv_glmer1$y, yrep[indx,]) + ggtitle(harv_glmer1$family$family)
 
-# Fitted vs. observed, grouped by patch
-ppc_scatter_avg_grouped(harv$AddRings, yrep[indx,], group = harv$Patch) +
-  geom_abline(intercept = 0, slope = 1)
+# Posterior predictive check: mean
+ppc_stat_grouped(harv_glmer1$y, yrep[indx,], group = harv_glmer1$glmod$fr$Patch, stat = mean) + 
+  ggtitle(harv_glmer1$family$family)
 
-# Normal QQ plot of tree-level random slope point estimates, grouped by patch
-grp_slope <- as.matrix(harv_glmer1, regex_pars = "b")
+# Posterior predictive check: SD
+ppc_stat_grouped(harv_glmer1$y, yrep[indx,], 
+                 group = harv$Patch[!is.na(harv$AddRings)], stat = sd) + 
+  ggtitle(harv_glmer1$family$family)
 
-colMedians(grp_slope) %>% data.frame() %>% setNames("slope") %>% 
+# Posterior predictive check: dispersion
+ppc_stat_grouped(harv_glmer1$y, yrep[indx,], group = harv_glmer1$glmod$fr$Patch, 
+                  stat = function(x) var(x)/mean(x)) + 
+  guides(fill = guide_legend(title = "V(Y)/E(Y)", title.vjust = 5)) + 
+  ggtitle(harv_glmer1$family$family)
+
+# Posterior predictive check: proportion of zeros
+ppc_stat_grouped(harv_glmer1$y, yrep[indx,], group = harv_glmer1$glmod$fr$Patch,
+                 stat = function(x) mean(x == 0)) +
+  guides(fill = guide_legend(title = "Proportion zeros", title.vjust = 5)) + 
+  ggtitle(harv_glmer1$family$family)
+
+# Normal QQ plot of tree-level random intercept point estimates, grouped by patch
+grp_intercept <- as.data.frame(harv_glmer1, regex_pars = "Sapling:") %>% 
+  select(-contains("Sigma")) %>% as.matrix()
+
+colMedians(grp_intercept) %>% data.frame() %>% setNames("intercept") %>% 
   mutate(Patch = factor(tapply(harv$Patch, harv$Sapling, unique))) %>% 
-  ggplot(aes(sample = slope)) + stat_qq(size = 2) + geom_qq_line() +
-  theme_bw() + facet_wrap(vars(Patch), ncol = 2)
+  ggplot(aes(sample = intercept)) + stat_qq(size = 2) + geom_qq_line() +
+  theme_bw() + facet_wrap(vars(Patch), ncol = 2) + ggtitle(harv_glmer1$family$family)
+
+# Normal QQ plot of plot-level random intercept point estimates, grouped by patch
+grp_intercept <- as.data.frame(harv_glmer1, regex_pars = "Plot:") %>% 
+  select(-contains("Sigma")) %>% as.matrix()
+
+colMedians(grp_intercept) %>% data.frame() %>% setNames("intercept") %>% 
+  mutate(Patch = factor(tapply(harv$Patch, harv$Plot, unique))) %>% 
+  ggplot(aes(sample = intercept)) + stat_qq(size = 2) + geom_qq_line() +
+  theme_bw() + facet_wrap(vars(Patch), ncol = 2) + ggtitle(harv_glmer1$family$family)
+
+# Inverse-link transformed linear predictor (expectation) and PPD as fn of height and patch
+# Use "new" level of grouping factors to marginalize over plot- and tree-level variance
+# (predictions are for a "random tree in a random plot")
+fitdata <- expand.grid(AddRings = 0, Height_RC = 1:round(max(harv$Height_RC),-1),
+                       Patch = unique(harv$Patch), Plot = "0", Sapling = "0")
+# transformed linear predictor
+fit_epred <- posterior_epred(harv_glmer1, newdata = fitdata, offset = log(fitdata$Height_RC))
+# posterior median and credible interval of transformed linear predictor
+fit_epred_stats <- colQuantiles(fit_epred, probs = c(0.025, 0.5, 0.975)) %>%
+  as.data.frame() %>% rename(c(lo = `2.5%`, med = `50%`, up = `97.5%`))
+# posterior predictive distribution
+fit_ppd <- posterior_predict(harv_glmer1, newdata = fitdata, offset = log(fitdata$Height_RC))
+# posterior median and credible interval of posterior predictive distribution
+fit_ppd_stats <- colQuantiles(fit_ppd, probs = c(0.025, 0.5, 0.975)) %>%
+  as.data.frame() %>% rename(c(lo = `2.5%`, med = `50%`, up = `97.5%`))
 
 # Additional rings vs. height, grouped by patch
-# Overlay posterior distribution (median and 95% credible interval) of linear predictor
+# Overlay posterior distribution (median and 95% credible interval) of expectation and PPD
 save_plot <- TRUE
 if(save_plot) {
   png(filename=here("analysis", "results", "harv_GLMM_fits.png"),
@@ -145,11 +169,11 @@ if(save_plot) {
 } else dev.new()
 
 harv %>% ggplot(aes(Height_RC, AddRings, group = Sapling)) +
-  geom_ribbon(aes(ymin = lo, ymax = up), data = cbind(fitdata, fit_linpred_stats),
+  geom_ribbon(aes(ymin = lo, ymax = up), data = cbind(fitdata, fit_epred_stats),
               fill = "gray", alpha = 0.9) +
   geom_ribbon(aes(ymin = lo, ymax = up), data = cbind(fitdata, fit_ppd_stats),
               fill = "gray", alpha = 0.5) +
-  geom_line(aes(Height_RC, med), data = cbind(fitdata, fit_linpred_stats),
+  geom_line(aes(Height_RC, med), data = cbind(fitdata, fit_epred_stats),
             color = "darkgray", lwd = 1) +
   geom_line(alpha = 0.4) + geom_point(shape = 1, alpha = 0.5, size = 2) + 
   xlab("Height on stem (cm)") + ylab("Additional rings") + 
@@ -161,19 +185,13 @@ if(save_plot) dev.off()
 #---------------------------------------------------------------------------
 # VERSION 2 
 # Model the difference in ring count from one section to the next
-# as a mean (intercept) only, scaling for the difference in height
-# as a multiplicative offset (additive log-offset)
-# Implies the same proportional relationship b/w section height
-# and total additional rings as V.1: the mean DiffRing / cm is equivalent
-# to the slope w.r.t. Height_RC
-# But incremental ring counts are a priori independent; 
-# also we can use the log link (and lognormal random effects)
+# Unlike total additional rings, incremental ring counts are 
+# a priori independent
 #---------------------------------------------------------------------------
 
-# Poisson
-# Intercept grouped by sapling and plot
+# Poisson likelihood (log link is default)
 harv_glmer2_pois <- stan_glmer(DiffRings ~ Patch + (1 | Sapling) + (1 | Plot), 
-                               offset = log(DiffHeight), family = poisson(link = "log"),
+                               offset = log(DiffHeight), family = poisson,
                                data = harv, na.action = na.omit,  
                                chains = getOption("mc.cores"), iter = 3000, warmup = 1000) 
 
@@ -183,10 +201,9 @@ summary(harv_glmer2_pois)
 cbind(rstan::get_elapsed_time(harv_glmer2_pois$stanfit), 
       total = rowSums(rstan::get_elapsed_time(harv_glmer2_pois$stanfit)))
 
-# Negative binomial
-# Intercept grouped by sapling and plot
+# Negative binomial likelihood (log link is default)
 harv_glmer2_nb <- stan_glmer(DiffRings ~ Patch + (1 | Sapling) + (1 | Plot), 
-                             offset = log(DiffHeight), family = neg_binomial_2(link = "log"),
+                             offset = log(DiffHeight), family = neg_binomial_2,
                              prior_aux = exponential(0.1),
                              data = harv, na.action = na.omit,  
                              chains = getOption("mc.cores"), iter = 3000, warmup = 1000) 
