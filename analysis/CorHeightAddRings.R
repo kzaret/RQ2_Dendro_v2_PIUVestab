@@ -60,7 +60,7 @@ cores_nd <- cores %>%
   rename(Patch = Patch2, Sapling = Individual, Height_RC = Cor_Height_cm)
 
 #===========================================================================
-# POISSON GLMM
+# COUNT GLMMs
 #===========================================================================
 
 #---------------------------------------------------------------------------
@@ -142,7 +142,7 @@ save_plot <- TRUE
 if(save_plot) {
   png(filename=here("analysis", "results", "harv_GLMM_fits.png"),
       width=7, height=7, units="in", res=300, type="cairo-png")
-} else { dev.new() }
+} else dev.new()
 
 harv %>% ggplot(aes(Height_RC, AddRings, group = Sapling)) +
   geom_ribbon(aes(ymin = lo, ymax = up), data = cbind(fitdata, fit_linpred_stats),
@@ -217,30 +217,34 @@ mod <- harv_glmer2_nb
 # contrary to help(posterior_predict)
 yrep <- posterior_predict(mod, offset = mod$offset)
 indx <- sample(nrow(yrep), 100)
-ppc_hist(as.vector(na.omit(harv$DiffRings)), yrep[indx[1:3],])
+ppc_hist(as.vector(na.omit(harv$DiffRings)), yrep[indx[1:3],]) + ggtitle(mod$family$family)
 
 # Rootogram of marginal posterior predictive density
-ppc_rootogram(as.vector(na.omit(harv$DiffRings)), yrep[indx,])
+ppc_rootogram(as.vector(na.omit(harv$DiffRings)), yrep[indx,]) + ggtitle(mod$family$family)
 
 # Posterior predictive check: mean
 ppc_stat_grouped(as.vector(na.omit(harv$DiffRings)), yrep[indx,], 
-                 group = harv$Patch[!is.na(harv$DiffRings)], stat = mean)
+                 group = harv$Patch[!is.na(harv$DiffRings)], stat = mean) + 
+  ggtitle(mod$family$family)
 
 # Posterior predictive check: SD
 ppc_stat_grouped(as.vector(na.omit(harv$DiffRings)), yrep[indx,], 
-                 group = harv$Patch[!is.na(harv$DiffRings)], stat = sd)
+                 group = harv$Patch[!is.na(harv$DiffRings)], stat = sd) + 
+  ggtitle(mod$family$family)
 
 # Posterior predictive check: dispersion
 ppc_stat_grouped(as.vector(na.omit(harv$DiffRings)), yrep[indx,], 
                  group = harv$Patch[!is.na(harv$DiffRings)], 
                  stat = function(x) var(x)/mean(x)) + 
-  guides(fill = guide_legend(title = "V(Y)/E(Y)", title.vjust = 5))
+  guides(fill = guide_legend(title = "V(Y)/E(Y)", title.vjust = 5)) + 
+  ggtitle(mod$family$family)
 
 # Posterior predictive check: proportion of zeros
 ppc_stat_grouped(as.vector(na.omit(harv$DiffRings)), yrep[indx,], 
                  group = harv$Patch[!is.na(harv$DiffRings)],
                  stat = function(x) mean(x == 0)) +
-  guides(fill = guide_legend(title = "Proportion zeros", title.vjust = 5))
+  guides(fill = guide_legend(title = "Proportion zeros", title.vjust = 5)) + 
+  ggtitle(mod$family$family)
 
 # Normal QQ plot of tree-level random intercept point estimates, grouped by patch
 grp_intercept <- as.data.frame(mod, regex_pars = "Sapling:") %>% 
@@ -249,7 +253,7 @@ grp_intercept <- as.data.frame(mod, regex_pars = "Sapling:") %>%
 colMedians(grp_intercept) %>% data.frame() %>% setNames("intercept") %>% 
   mutate(Patch = factor(tapply(harv$Patch, harv$Sapling, unique))) %>% 
   ggplot(aes(sample = intercept)) + stat_qq(size = 2) + geom_qq_line() +
-  theme_bw() + facet_wrap(vars(Patch), ncol = 2)
+  theme_bw() + facet_wrap(vars(Patch), ncol = 2) + ggtitle(mod$family$family)
 
 # Normal QQ plot of plot-level random intercept point estimates, grouped by patch
 grp_intercept <- as.data.frame(mod, regex_pars = "Plot:") %>% 
@@ -258,25 +262,34 @@ grp_intercept <- as.data.frame(mod, regex_pars = "Plot:") %>%
 colMedians(grp_intercept) %>% data.frame() %>% setNames("intercept") %>% 
   mutate(Patch = factor(tapply(harv$Patch, harv$Plot, unique))) %>% 
   ggplot(aes(sample = intercept)) + stat_qq(size = 2) + geom_qq_line() +
-  theme_bw() + facet_wrap(vars(Patch), ncol = 2)
+  theme_bw() + facet_wrap(vars(Patch), ncol = 2) + ggtitle(mod$family$family)
 
 # Dotplots of rings/cm by sapling
 # Overlay violin plots of PPD
+save_plot <- TRUE
+if(save_plot) {
+  png(filename=here("analysis", "results", paste0("harv_GLMMv2_", mod$family$family, "_fits.png")),
+      width=7, height=7, units="in", res=300, type="cairo-png")
+} else dev.new()
+
 dat <- data.frame(iter = rep(indx, ncol(yrep)),
                   Patch = rep(mod$glmod$fr$Patch, each = length(indx)),
                   Sapling = rep(mod$glmod$fr$Sapling, each = length(indx)),
-                  DiffHeight = rep(exp(mod$glmod$fr[,"(offset)"]), each = length(indx)),
+                  DiffHeight = rep(exp(mod$offset), each = length(indx)),
                   DiffRings = as.vector(yrep[indx,]))
 
-harv %>% arrange(Patch, Plot, Sapling, Height_RC) %>% group_by(Sapling) %>% 
+harv %>% group_by(Sapling) %>% 
   ungroup() %>% as.data.frame() %>%
   ggplot(aes(x = Sapling, y = DiffRings / DiffHeight)) +
   geom_violin(aes(x = Sapling, y = DiffRings / DiffHeight, group = Sapling), 
-              data = dat, color = "gray", fill = "gray", alpha = 0.8) +
-  geom_point(shape = 1, alpha = 0.7) +
+              data = dat, color = "darkgray", fill = "darkgray", alpha = 0.8) +
+  geom_jitter(shape = 16, alpha = 0.5, size = 1, width = 0.1, height = 0) +
   xlab("Sapling") + ylab("Additional rings / cm") +
   theme_bw() + theme(axis.text.x = element_blank()) + 
-  facet_wrap(vars(Patch), scales = "free_x")
+  facet_wrap(vars(Patch), scales = "free_x") + 
+  ggtitle(mod$family$family)
+
+if(save_plot) dev.off()
 
 # Scatterplot of rings/cm vs section height
 # Any residual relationship?
@@ -285,7 +298,8 @@ harv %>% arrange(Patch, Plot, Sapling, Height_RC) %>% group_by(Sapling) %>%
   ggplot(aes(x = Height_RC, y = DiffRings / DiffHeight, group = Sapling)) +
   geom_point(shape = 1, alpha = 0.5) + geom_line(alpha = 0.4) +
   xlab("Section height") + ylab("Additional rings / cm") +
-  theme_bw() + facet_wrap(vars(Patch), scales = "free")
+  theme_bw() + facet_wrap(vars(Patch), scales = "free") + 
+  ggtitle(mod$family$family)
 
 
 #---------------------------------------------------------------------------
