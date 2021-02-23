@@ -255,7 +255,7 @@ colMedians(grp_intercept) %>% data.frame() %>% setNames("intercept") %>%
   ggplot(aes(sample = intercept)) + stat_qq(size = 2) + geom_qq_line() +
   theme_bw() + facet_wrap(vars(Patch), ncol = 2) + ggtitle(mod$family$family)
 
-# Normal QQ plot of plot-level random intercept point estimates, grouped by patch
+# Normal QQ plot of plot-level random intercept point estimates, grouped by plot
 grp_intercept <- as.data.frame(mod, regex_pars = "Plot:") %>% 
   select(-contains("Sigma")) %>% as.matrix()
 
@@ -278,8 +278,7 @@ dat <- data.frame(iter = rep(indx, ncol(yrep)),
                   DiffHeight = rep(exp(mod$offset), each = length(indx)),
                   DiffRings = as.vector(yrep[indx,]))
 
-harv %>% group_by(Sapling) %>% 
-  ungroup() %>% as.data.frame() %>%
+harv %>% group_by(Sapling) %>% ungroup() %>% as.data.frame() %>%
   ggplot(aes(x = Sapling, y = DiffRings / DiffHeight)) +
   geom_violin(aes(x = Sapling, y = DiffRings / DiffHeight, group = Sapling), 
               data = dat, color = "darkgray", fill = "darkgray", alpha = 0.8) +
@@ -293,8 +292,7 @@ if(save_plot) dev.off()
 
 # Scatterplot of rings/cm vs section height
 # Any residual relationship?
-harv %>% arrange(Patch, Plot, Sapling, Height_RC) %>% group_by(Sapling) %>% 
-  ungroup() %>% as.data.frame() %>%
+harv %>% arrange(Patch, Plot, Sapling, Height_RC) %>% 
   ggplot(aes(x = Height_RC, y = DiffRings / DiffHeight, group = Sapling)) +
   geom_point(shape = 1, alpha = 0.5) + geom_line(alpha = 0.4) +
   xlab("Section height") + ylab("Additional rings / cm") +
