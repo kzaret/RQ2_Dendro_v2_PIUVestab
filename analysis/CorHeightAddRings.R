@@ -164,7 +164,7 @@ fit_ppd_stats <- colQuantiles(fit_ppd, probs = c(0.025, 0.5, 0.975)) %>%
 # Overlay posterior distribution (median and 95% credible interval) of expectation and PPD
 save_plot <- TRUE
 if(save_plot) {
-  png(filename=here("analysis", "results", "harv_GLMM_fits.png"),
+  png(filename=here("analysis", "results", "harv_GLMMv1_fits.png"),
       width=7, height=7, units="in", res=300, type="cairo-png")
 } else dev.new()
 
@@ -177,7 +177,8 @@ harv %>% ggplot(aes(Height_RC, AddRings, group = Sapling)) +
             color = "darkgray", lwd = 1) +
   geom_line(alpha = 0.4) + geom_point(shape = 1, alpha = 0.5, size = 2) + 
   xlab("Height on stem (cm)") + ylab("Additional rings") + 
-  theme_bw() + facet_wrap(vars(Patch), ncol = 2)
+  theme_bw() + facet_wrap(vars(Patch), ncol = 2) + 
+  ggtitle(paste("GLMMv1", harv_glmer1$family$family))
 
 if(save_plot) dev.off()
 
@@ -306,13 +307,46 @@ harv %>% ggplot(aes(x = Sapling, y = DiffRings / DiffHeight)) +
 
 if(save_plot) dev.off()
 
-# Scatterplot of rings/cm vs section height
-# Any residual relationship?
-harv %>% ggplot(aes(x = Height_RC, y = DiffRings / DiffHeight, group = Sapling)) +
-  geom_point(shape = 1, alpha = 0.5) + geom_line(alpha = 0.4) +
-  xlab("Section height") + ylab("Additional rings / cm") +
-  theme_bw() + facet_wrap(vars(Patch), scales = "free") + 
-  ggtitle(mod$family$family)
+# Extrapolate model fitted to incremental ring counts to predict total additional rings
+# from root-shoot boundary
+
+# Inverse-link transformed linear predictor (expectation) and PPD as fn of height and patch
+# Use "new" level of grouping factors to marginalize over plot- and tree-level variance
+# (predictions are for a "random tree in a random plot")
+predata <- expand.grid(DiffRings = 0, DiffHeight = 1:round(max(harv$Height_RC),-1),
+                       Patch = unique(harv$Patch), Plot = "0", Sapling = "0")
+# transformed linear predictor
+pre_epred <- posterior_epred(mod, newdata = predata, offset = log(predata$DiffHeight))
+# posterior median and credible interval of transformed linear predictor
+pre_epred_stats <- colQuantiles(pre_epred, probs = c(0.025, 0.5, 0.975)) %>%
+  as.data.frame() %>% rename(c(lo = `2.5%`, med = `50%`, up = `97.5%`))
+# posterior predictive distribution
+pre_ppd <- posterior_predict(mod, newdata = predata, offset = log(predata$DiffHeight))
+# posterior median and credible interval of posterior predictive distribution
+pre_ppd_stats <- colQuantiles(pre_ppd, probs = c(0.025, 0.5, 0.975)) %>%
+  as.data.frame() %>% rename(c(lo = `2.5%`, med = `50%`, up = `97.5%`))
+
+# Cumulative additional rings vs. height, grouped by patch
+# Overlay posterior distribution (median and 95% credible interval) of expectation and PPD
+save_plot <- TRUE
+if(save_plot) {
+  png(filename=here("analysis", "results", paste0("harv_GLMMv2_", mod$family$family, "_predict_AddRings.png")),
+      width=7, height=7, units="in", res=300, type="cairo-png")
+} else dev.new()
+
+harv %>% ggplot(aes(Height_RC, AddRings, group = Sapling)) +
+  geom_ribbon(aes(x = DiffHeight, ymin = lo, ymax = up), inherit.aes = FALSE,
+              data = cbind(predata, pre_epred_stats), fill = "gray", alpha = 0.9) +
+  geom_ribbon(aes(x = DiffHeight, ymin = lo, ymax = up), inherit.aes = FALSE,
+              data = cbind(predata, pre_ppd_stats), fill = "gray", alpha = 0.5) +
+  geom_line(aes(DiffHeight, med), data = cbind(predata, pre_epred_stats),
+            color = "darkgray", lwd = 1) +
+  geom_line(alpha = 0.4) + geom_point(shape = 1, alpha = 0.5, size = 2) + 
+  xlab("Height on stem (cm)") + ylab("Additional rings") + 
+  theme_bw() + facet_wrap(vars(Patch), ncol = 2) + 
+  ggtitle(paste("GLMMv2", mod$family$family))
+
+if(save_plot) dev.off()
 
 
 #---------------------------------------------------------------------------
