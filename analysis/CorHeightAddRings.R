@@ -99,7 +99,7 @@ cbind(rstan::get_elapsed_time(harv_glmer1$stanfit),
 # Note that the offset argument is apparently needed, 
 # contrary to help(posterior_predict)
 yrep <- posterior_predict(harv_glmer1, offset = harv_glmer1$offset)
-indx <- sample(nrow(yrep), 100)
+indx <- sample(nrow(yrep), 1000)
 ppc_hist(harv_glmer1$y, yrep[indx[1:3],]) + ggtitle(harv_glmer1$family$family)
 
 # Rootogram of marginal posterior predictive density
@@ -234,7 +234,7 @@ mod <- harv_glmer2_nb
 # Note that the offset argument is apparently needed, 
 # contrary to help(posterior_predict)
 yrep <- posterior_predict(mod, offset = mod$offset)
-indx <- sample(nrow(yrep), 100)
+indx <- sample(nrow(yrep), 1000)
 ppc_hist(as.vector(na.omit(harv$DiffRings)), yrep[indx[1:3],]) + ggtitle(mod$family$family)
 
 # Rootogram of marginal posterior predictive density
