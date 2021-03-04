@@ -172,9 +172,9 @@ data.frame(iter = rep(indx, ncol(rtp)),
   geom_density_ridges(color = "white", fill = "black") +
   scale_x_log10(expand = expansion(0,0)) + scale_y_discrete(expand = expansion(mult = c(0.02,0.08))) +
   xlab("Estimated rings to pith") + ylab("Tree") + theme_bw(base_size = 16) + 
-  theme(axis.text.y = element_blank(), axis.ticks.y = element_blank(), 
-        panel.grid = element_blank(), panel.background = element_rect(fill = "black", color = "black"), 
-        strip.background = element_rect(color = "black", fill = "black"), 
+  theme(axis.text.y = element_blank(), axis.ticks.y = element_blank(), panel.grid = element_blank(), 
+        panel.background = element_rect(fill = "black", color = "black"), panel.border = element_blank(),
+        strip.background = element_rect(color = "black", fill = "black"),
         strip.text = element_text(color = "white")) +
   facet_wrap(vars(patch), scales = "free")
 
