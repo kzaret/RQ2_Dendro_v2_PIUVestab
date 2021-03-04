@@ -114,7 +114,7 @@ rings_to_pith <- round(rtp)
 # Overlay violin plots of PPD
 save_plot <- TRUE
 if(save_plot) {
-  png(filename=here("analysis", "results", "duncan_lmer_fits.png"),
+  png(filename=here("analysis", "results", "duncan_lmer_ppd_violins.png"),
       width=7, height=7, units="in", res=300, type="cairo-png")
 } else dev.new()
 
@@ -125,32 +125,33 @@ dat <- data.frame(iter = rep(indx, ncol(yrep)),
   mutate(tree = fct_reorder(.f = tree, .x = width, .fun = mean))
   
 inner_rings %>% ggplot(aes(x = tree, y = width)) +
-  geom_violin(aes(x = tree, y = width, group = tree),
+  geom_violin(aes(x = tree, y = width),
               data = dat, color = "darkgray", fill = "darkgray", alpha = 0.8) +
   geom_jitter(shape = 16, alpha = 0.5, size = 1, width = 0.1, height = 0) +
-  scale_y_log10() + xlab("Tree") + ylab("Inner ring width (cm)") +
-  theme_bw(base_size = 16) + theme(axis.text.x = element_blank()) + 
+  scale_y_log10() + xlab("Tree") + ylab("Inner ring width (cm)") + theme_bw(base_size = 16) + 
+  theme(axis.ticks.x = element_blank(), axis.text.x = element_blank()) + 
   facet_wrap(vars(patch), scales = "free_x")
 
 if(save_plot) dev.off()
 
-# Violin plots of posterior distribution of ring-to-pith estimates
+# Credible intervals of posterior distribution of ring-to-pith estimates
 save_plot <- TRUE
 if(save_plot) {
-  png(filename=here("analysis", "results", "duncan_rings-to-pith_violins.png"),
+  png(filename=here("analysis", "results", "duncan_rings-to-pith_intervals.png"),
       width=7, height=7, units="in", res=300, type="cairo-png")
 } else dev.new()
 
-data.frame(iter = rep(indx, ncol(rtp)),
-           patch = rep(duncan$patch, each = length(indx)),
-           tree = rep(duncan$tree, each = length(indx)),
-           rtp = as.vector(rtp[indx,])) %>%
-  mutate(tree = fct_reorder(.f = tree, .x = rtp, .fun = median)) %>% 
-  ggplot(aes(x = tree, y = rtp, group = tree)) +
-  geom_violin(color = "darkgray", fill = "darkgray", alpha = 0.8) +
-  xlab("Tree") + ylab("Estimated rings to pith") +
-  theme_bw(base_size = 16) + theme(axis.text.x = element_blank()) + 
-  facet_wrap(vars(patch), scales = "free_x")
+mcmc_intervals_data(rtp, prob = 0.8, prob_outer = 0.95) %>% 
+  mutate(patch = duncan$patch, tree = fct_reorder(duncan$tree, .x = m, .fun = identity)) %>% 
+  ggplot(aes(x = tree, y = m)) +
+  geom_linerange(aes(ymin = l, ymax = h), size = 1.5, color = "darkgray") +
+  geom_linerange(aes(ymin = ll, ymax = hh), size = 0.5, color = "darkgray") +
+  geom_point(pch = 16, size = 1) +
+  xlab("Tree") + ylab("Estimated rings to pith") + 
+  theme_bw(base_size = 16) + 
+  theme(axis.ticks.x = element_blank(), axis.text.x = element_blank(),
+        panel.grid = element_blank()) + 
+  facet_wrap(vars(patch), scales = "free")
 
 if(save_plot) dev.off()
 
