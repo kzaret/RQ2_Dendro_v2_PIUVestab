@@ -11,6 +11,7 @@
 
 library(rstanarm)
 library(dplyr)
+library(forcats)
 library(bayesplot)
 library(shinystan)
 library(ggplot2)
