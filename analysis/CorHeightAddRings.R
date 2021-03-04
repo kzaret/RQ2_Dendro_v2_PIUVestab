@@ -95,11 +95,13 @@ cbind(rstan::get_elapsed_time(harv_glmer1$stanfit),
 
 ## FIGURES
 
-# Histograms of data and draws from marginal PPD
+# Simulate draws from posterior predictive distribution
 # Note that the offset argument is apparently needed, 
 # contrary to help(posterior_predict)
 yrep <- posterior_predict(harv_glmer1, offset = harv_glmer1$offset)
 indx <- sample(nrow(yrep), 1000)
+
+# Histograms of data and draws from marginal PPD
 ppc_hist(harv_glmer1$y, yrep[indx[1:3],]) + ggtitle(harv_glmer1$family$family)
 
 # Rootogram of marginal posterior predictive density
@@ -127,19 +129,13 @@ ppc_stat_grouped(harv_glmer1$y, yrep[indx,], group = harv_glmer1$glmod$fr$Patch,
   ggtitle(harv_glmer1$family$family)
 
 # Normal QQ plot of tree-level random intercept point estimates, grouped by patch
-grp_intercept <- as.data.frame(harv_glmer1, regex_pars = "Sapling:") %>% 
-  select(-contains("Sigma")) %>% as.matrix()
-
-colMedians(grp_intercept) %>% data.frame() %>% setNames("intercept") %>% 
+ranef(harv_glmer1)$Sapling %>% rename(intercept = `(Intercept)`) %>% 
   mutate(Patch = factor(tapply(harv$Patch, harv$Sapling, unique))) %>% 
   ggplot(aes(sample = intercept)) + stat_qq(size = 2) + geom_qq_line() +
   theme_bw() + facet_wrap(vars(Patch), ncol = 2) + ggtitle(harv_glmer1$family$family)
 
 # Normal QQ plot of plot-level random intercept point estimates, grouped by patch
-grp_intercept <- as.data.frame(harv_glmer1, regex_pars = "Plot:") %>% 
-  select(-contains("Sigma")) %>% as.matrix()
-
-colMedians(grp_intercept) %>% data.frame() %>% setNames("intercept") %>% 
+ranef(harv_glmer1)$Plot %>% rename(intercept = `(Intercept)`) %>% 
   mutate(Patch = factor(tapply(harv$Patch, harv$Plot, unique))) %>% 
   ggplot(aes(sample = intercept)) + stat_qq(size = 2) + geom_qq_line() +
   theme_bw() + facet_wrap(vars(Patch), ncol = 2) + ggtitle(harv_glmer1$family$family)
@@ -228,13 +224,15 @@ loo_compare(loo_pois, loo_nb)
 ## FIGURES
 
 # Choose your fighter
-mod <- harv_glmer2_nb
+mod <- harv_glmer2_pois
 
-# Histograms of data and draws from marginal PPD
+# Simulate draws from posterior predictive distribution
 # Note that the offset argument is apparently needed, 
 # contrary to help(posterior_predict)
 yrep <- posterior_predict(mod, offset = mod$offset)
 indx <- sample(nrow(yrep), 1000)
+
+# Histograms of data and draws from marginal PPD
 ppc_hist(as.vector(na.omit(harv$DiffRings)), yrep[indx[1:3],]) + ggtitle(mod$family$family)
 
 # Rootogram of marginal posterior predictive density
@@ -265,19 +263,13 @@ ppc_stat_grouped(as.vector(na.omit(harv$DiffRings)), yrep[indx,],
   ggtitle(mod$family$family)
 
 # Normal QQ plot of tree-level random intercept point estimates, grouped by patch
-grp_intercept <- as.data.frame(mod, regex_pars = "Sapling:") %>% 
-  select(-contains("Sigma")) %>% as.matrix()
-
-colMedians(grp_intercept) %>% data.frame() %>% setNames("intercept") %>% 
+ranef(mod)$Sapling %>% rename(intercept = `(Intercept)`) %>% 
   mutate(Patch = factor(tapply(harv$Patch, harv$Sapling, unique))) %>% 
   ggplot(aes(sample = intercept)) + stat_qq(size = 2) + geom_qq_line() +
   theme_bw() + facet_wrap(vars(Patch), ncol = 2) + ggtitle(mod$family$family)
 
 # Normal QQ plot of plot-level random intercept point estimates, grouped by patch
-grp_intercept <- as.data.frame(mod, regex_pars = "Plot:") %>% 
-  select(-contains("Sigma")) %>% as.matrix()
-
-colMedians(grp_intercept) %>% data.frame() %>% setNames("intercept") %>% 
+ranef(mod)$Plot %>% rename(intercept = `(Intercept)`) %>% 
   mutate(Patch = factor(tapply(harv$Patch, harv$Plot, unique))) %>% 
   ggplot(aes(sample = intercept)) + stat_qq(size = 2) + geom_qq_line() +
   theme_bw() + facet_wrap(vars(Patch), ncol = 2) + ggtitle(mod$family$family)
