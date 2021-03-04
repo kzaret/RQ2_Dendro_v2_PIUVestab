@@ -48,6 +48,9 @@ summary(duncan_lmer)
 yrep <- posterior_predict(duncan_lmer)
 indx <- sample(nrow(yrep), 2000)
 
+# Posterior predictive check: density overlay
+ppc_dens_overlay_grouped(duncan_lmer$y, yrep[indx[1:500],], group = duncan_lmer$glmod$fr$patch)
+
 # Posterior predictive check: histograms
 ppc_hist(duncan_lmer$y, yrep[indx[1:3],])
 
