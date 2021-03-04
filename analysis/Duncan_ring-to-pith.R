@@ -101,9 +101,9 @@ data.frame(duncan_lmer$glmod$fr, resid = resid(duncan_lmer)) %>%
 
 # median of lognormal is exp(mu)
 # if wanted mean instead, would need exp(mu + 0.5*sigma^2)
-d_hat = exp(posterior_linpred(duncan_lmer, newdata = duncan))
-rtp = sweep(1/d_hat, 2, duncan$r, "*")  # keep continuous version for plotting
-rings_to_pith = round(rtp)
+d_hat <- exp(posterior_linpred(duncan_lmer, newdata = duncan))
+rtp <- sweep(1/d_hat, 2, duncan$r, "*")  # keep continuous version for plotting
+rings_to_pith <- round(rtp)
 
 
 #===========================================================================
