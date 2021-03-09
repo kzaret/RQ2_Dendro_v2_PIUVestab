@@ -41,9 +41,9 @@ duncan <- duncan %>% rename(tree = `Core..`, h = H, width_1st_full_ring = X1st.f
                             subtract_if_not_arching = If.last.vis.ring.not.arching..extra.rings.to.subtract,
                             rings_to_pith_adj = Adj.rings.to.pith,
                             duplicate = Adj.rings.to.pith.values,
-                            downward_curvature = downward.curvature) %>% select(-duplicate) %>% 
+                            downward_curvature = downward.curvature) %>% 
   mutate(patch = inner_rings$patch[match(tree, inner_rings$tree)], .before = tree) %>% 
-  filter(!is.na(patch)) # temporarily (?) throw out trees not present in inner_rings
+  select(-duplicate) %>% filter(!is.na(patch)) # throw out trees not present in inner_rings
 
 
 #===========================================================================
@@ -65,7 +65,7 @@ summary(duncan_lmer)
 yrep <- posterior_predict(duncan_lmer)
 indx <- sample(nrow(yrep), 2000)
 
-# Posterior predictive check: density overlay
+# Posterior predictive check: density overlay (note: takes a while)
 ppc_dens_overlay_grouped(duncan_lmer$y, yrep[indx[1:500],], group = duncan_lmer$glmod$fr$patch)
 
 # Posterior predictive check: histograms
