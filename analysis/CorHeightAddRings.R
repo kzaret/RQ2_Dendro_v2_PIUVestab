@@ -56,7 +56,7 @@ cores <- read.csv(here("data","PIUV_CoredProcessed.csv"), header = TRUE)
 # select & mutate predictor columns to match those used in the model
 cores_nd <- cores %>%
   filter(Patch2 != "Cushion") %>% # remove cores from Cushion patch
-  select(Patch2, Individual, Cor_Height_cm) %>%
+  select(Patch2, Plot, Individual, Cor_Height_cm) %>%
   rename(Patch = Patch2, Sapling = Individual, Height_RC = Cor_Height_cm)
 
 #===========================================================================
