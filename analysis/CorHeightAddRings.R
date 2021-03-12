@@ -361,7 +361,7 @@ data.frame(iter = rep(1:nrow(arc), ncol(arc)),
   ggplot(aes(x = arc, y = tree, height = stat(density))) + 
   geom_density_ridges(color = "white", fill = "black") +
   scale_x_log10(expand = expansion(0,0)) + scale_y_discrete(expand = expansion(mult = c(0.02,0.08))) +
-  xlab("Additional rings at root-shoot-boundary") + ylab("Tree") + theme_bw(base_size = 16) + 
+  xlab("Additional rings at root-shoot boundary") + ylab("Tree") + theme_bw(base_size = 16) + 
   theme(axis.text.y = element_blank(), axis.ticks.y = element_blank(), panel.grid = element_blank(), 
         panel.background = element_rect(fill = "black", color = "black"), panel.border = element_blank(),
         strip.background = element_rect(color = "black", fill = "black"),
