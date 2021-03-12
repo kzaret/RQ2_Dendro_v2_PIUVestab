@@ -143,44 +143,6 @@ ranef(harv_glmer1)$plot %>% rename(intercept = `(Intercept)`) %>%
   ggplot(aes(sample = intercept)) + stat_qq(size = 2) + geom_qq_line() +
   theme_bw() + facet_wrap(vars(patch), ncol = 2) + ggtitle(harv_glmer1$family$family)
 
-# Inverse-link transformed linear predictor (expectation) and PPD as fn of height and patch
-# Use "new" level of grouping factors to marginalize over plot- and tree-level variance
-# (predictions are for a "random tree in a random plot")
-fitdata <- expand.grid(add_rings = 0, height = 1:round(max(harv$height),-1),
-                       patch = unique(harv$patch), plot = "0", tree = "0")
-# transformed linear predictor
-fit_epred <- posterior_epred(harv_glmer1, newdata = fitdata, offset = log(fitdata$height))
-# posterior median and credible interval of transformed linear predictor
-fit_epred_stats <- colQuantiles(fit_epred, probs = c(0.025, 0.5, 0.975)) %>%
-  as.data.frame() %>% rename(c(lo = `2.5%`, med = `50%`, up = `97.5%`))
-# posterior predictive distribution
-fit_ppd <- posterior_predict(harv_glmer1, newdata = fitdata, offset = log(fitdata$height))
-# posterior median and credible interval of posterior predictive distribution
-fit_ppd_stats <- colQuantiles(fit_ppd, probs = c(0.025, 0.5, 0.975)) %>%
-  as.data.frame() %>% rename(c(lo = `2.5%`, med = `50%`, up = `97.5%`))
-
-# Additional rings vs. height, grouped by patch
-# Overlay posterior distribution (median and 95% credible interval) of expectation and PPD
-save_plot <- TRUE
-if(save_plot) {
-  png(filename=here("analysis", "results", "harv_GLMMv1_fits.png"),
-      width=7, height=7, units="in", res=300, type="cairo-png")
-} else dev.new()
-
-harv %>% ggplot(aes(height, add_rings, group = tree)) +
-  geom_ribbon(aes(ymin = lo, ymax = up), data = cbind(fitdata, fit_epred_stats),
-              fill = "gray", alpha = 0.9) +
-  geom_ribbon(aes(ymin = lo, ymax = up), data = cbind(fitdata, fit_ppd_stats),
-              fill = "gray", alpha = 0.5) +
-  geom_line(aes(height, med), data = cbind(fitdata, fit_epred_stats),
-            color = "darkgray", lwd = 1) +
-  geom_line(alpha = 0.4) + geom_point(shape = 1, alpha = 0.5, size = 2) + 
-  xlab("Height on stem (cm)") + ylab("Additional rings") + 
-  theme_bw() + facet_wrap(vars(patch), ncol = 2) + 
-  ggtitle(paste("GLMMv1", harv_glmer1$family$family))
-
-if(save_plot) dev.off()
-
 
 #---------------------------------------------------------------------------
 # VERSION 2 
