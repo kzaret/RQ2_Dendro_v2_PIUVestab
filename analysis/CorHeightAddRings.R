@@ -11,6 +11,7 @@ library(lme4)
 library(dplyr)
 library(forcats)
 library(ggplot2)
+library(ggridges)
 library(rstanarm)
 library(bayesplot)
 library(shinystan)
@@ -81,6 +82,10 @@ vignette("priors", package = 'rstanarm')
 #---------------------------------------------------------------------------
 # VERSION 1 
 # Model total additional rings relative to root-shoot boundary
+#
+# NOTE: STATISTICALLY INVALID because cumulative ring counts within a tree
+# are mathematically nonindependent. Use incremental counts (V2) instead.
+#
 # Exclude "artificial zeros" at zero height b/c this is not a valid
 # log-offset, and zero origin is already implied by proportionality
 #---------------------------------------------------------------------------
@@ -97,7 +102,7 @@ summary(harv_glmer1)
 cbind(rstan::get_elapsed_time(harv_glmer1$stanfit), 
       total = rowSums(rstan::get_elapsed_time(harv_glmer1$stanfit)))
 
-## FIGURES
+## FIGURES ##
 
 # Simulate draws from posterior predictive distribution
 # Note that the offset argument is apparently needed, 
@@ -186,7 +191,7 @@ loo_nb
 
 loo_compare(loo_pois, loo_nb)
 
-## FIGURES
+## FIGURES ## 
 
 # Choose your fighter
 mod <- harv_glmer2_pois
@@ -299,11 +304,73 @@ harv %>% ggplot(aes(height, add_rings, group = tree)) +
 if(save_plot) dev.off()
 
 
+#===========================================================================
+# CORING-HEIGHT CORRECTIONS
+#
+# Posterior distribution of expected additional ring counts 
+# (from root-shoot boundary) for cored trees 
+# Plots without harvested saplings have plot-level coefficients drawn
+# from the hyperdistribution
+#===========================================================================
+
+# Choose your fighter
+mod <- harv_glmer2_nb
+
+arc <- posterior_epred(mod, newdata = cores, offset = log(cores$height))
+add_rings_cores <- round(arc)  # keep continuous version for log-scale plots
+
 #---------------------------------------------------------------------------
-# Predict outcome (additional ring counts) for cored trees 
+# FIGURES 
 #---------------------------------------------------------------------------
 
-ppd_cores <- posterior_predict(harv_glmer, newdata = cores)
+# Credible intervals of posterior distribution of additional rings
+save_plot <- TRUE
+if(save_plot) {
+  png(filename=here("analysis", "results", "coring-height-correction_intervals.png"),
+      width=7, height=7, units="in", res=300, type="cairo-png")
+} else dev.new()
+
+mcmc_intervals_data(arc, prob = 0.8, prob_outer = 0.95) %>% 
+  mutate(patch = cores$patch, tree = fct_reorder(cores$tree, .x = m, .fun = identity)) %>% 
+  ggplot(aes(x = tree, y = m)) +
+  geom_linerange(aes(ymin = l, ymax = h), size = 1.5, color = "darkgray") +
+  geom_linerange(aes(ymin = ll, ymax = hh), size = 0.5, color = "darkgray") +
+  geom_point(pch = 16, size = 1) +
+  xlab("Tree") + ylab("Additional rings at root-shoot boundary") + 
+  theme_bw(base_size = 16) + 
+  theme(axis.ticks.x = element_blank(), axis.text.x = element_blank(),
+        panel.grid = element_blank()) + 
+  facet_wrap(vars(patch), scales = "free")
+
+if(save_plot) dev.off()
+
+# Joyplots of posterior distribution of ring-to-pith estimates
+##   No words could explain, no actions determine
+##   Just watching the trees and the leaves as they fall
+save_plot <- TRUE
+if(save_plot) {
+  png(filename=here("analysis", "results", "coring-height-correction_joyplots.png"),
+      width=7, height=7, units="in", res=300, type="cairo-png")
+} else dev.new()
+
+data.frame(iter = rep(1:nrow(arc), ncol(arc)),
+           patch = rep(cores$patch, each = nrow(arc)),
+           tree = rep(cores$tree, each = nrow(arc)),
+           arc = as.vector(arc)) %>%
+  mutate(tree = fct_reorder(.f = tree, .x = arc, .fun = median)) %>% 
+  ggplot(aes(x = arc, y = tree, height = stat(density))) + 
+  geom_density_ridges(color = "white", fill = "black") +
+  scale_x_log10(expand = expansion(0,0)) + scale_y_discrete(expand = expansion(mult = c(0.02,0.08))) +
+  xlab("Additional rings at root-shoot-boundary") + ylab("Tree") + theme_bw(base_size = 16) + 
+  theme(axis.text.y = element_blank(), axis.ticks.y = element_blank(), panel.grid = element_blank(), 
+        panel.background = element_rect(fill = "black", color = "black"), panel.border = element_blank(),
+        strip.background = element_rect(color = "black", fill = "black"),
+        strip.text = element_text(color = "white")) +
+  facet_wrap(vars(patch), scales = "free")
+
+if(save_plot) dev.off()
+
+
 
 
 

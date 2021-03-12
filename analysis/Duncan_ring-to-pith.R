@@ -91,13 +91,13 @@ data.frame(duncan_lmer$glmod$fr, resid = resid(duncan_lmer)) %>%
 
 #===========================================================================
 # DUNCAN RING-TO-PITH CORRECTIONS
-#===========================================================================
-
+#
 # Compute Duncan ring-to-pith correction for each tree as r/d_hat,
 # where the missing radius (r) is already calculated as r = L^2/(8*h) + h/2
 # and d_hat is the median inner ring width (more robust than mean for lognormally
 # distributed data) estimated by the hierarchical model
 # Repeat for each draw from the posterior
+#===========================================================================
 
 # median of lognormal is exp(mu)
 # if wanted mean instead, would need exp(mu + 0.5*sigma^2)
@@ -164,10 +164,10 @@ if(save_plot) {
       width=7, height=7, units="in", res=300, type="cairo-png")
 } else dev.new()
 
-data.frame(iter = rep(indx, ncol(rtp)),
-           patch = rep(duncan$patch, each = length(indx)),
-           tree = rep(duncan$tree, each = length(indx)),
-           rtp = as.vector(rtp[indx,])) %>%
+data.frame(iter = rep(nrow(rtp), ncol(rtp)),
+           patch = rep(duncan$patch, each = nrow(rtp)),
+           tree = rep(duncan$tree, each = nrow(rtp)),
+           rtp = as.vector(rtp)) %>%
   mutate(tree = fct_reorder(.f = tree, .x = rtp, .fun = median)) %>% 
   ggplot(aes(x = rtp, y = tree, height = stat(density))) + 
   geom_density_ridges(color = "white", fill = "black") +
