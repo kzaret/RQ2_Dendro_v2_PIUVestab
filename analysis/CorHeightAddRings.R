@@ -59,9 +59,9 @@ cores_raw <- read.csv(here("data","PIUV_CoredProcessed.csv"), header = TRUE)
 
 # select & mutate predictor columns to match those used in the model
 cores <- cores_raw %>%
-  filter(Patch2 != "Cushion") %>% # remove cores from Cushion patch
   select(Patch2, Plot, Individual, Cor_Height_cm) %>%
-  rename(patch = Patch2, plot = Plot, tree = Individual, height = Cor_Height_cm)
+  rename(patch = Patch2, plot = Plot, tree = Individual, height = Cor_Height_cm) %>% 
+  filter(patch != "Cushion" & plot != "R0X") # remove Cushion patch and R0X plot
 
 #===========================================================================
 # COUNT GLMMs
