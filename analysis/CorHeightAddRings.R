@@ -62,7 +62,7 @@ cores_raw <- read.csv(here("data","PIUV_CoredProcessed.csv"), header = TRUE)
 cores <- cores_raw %>%
   select(Patch2, Plot, Individual, Cor_Height_cm) %>%
   rename(patch = Patch2, plot = Plot, tree = Individual, height = Cor_Height_cm) %>% 
-  filter(patch != "Cushion" & plot != "R0X") # remove Cushion patch and R0X plot
+  filter(patch != "Cushion" & plot != "R0X" & !is.na(plot)) # remove Cushion patch, R0X and NA plots
 
 #===========================================================================
 # COUNT GLMMs
