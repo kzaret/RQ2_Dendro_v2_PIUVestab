@@ -27,23 +27,26 @@ if(.Platform$OS.type == "windows") options(device = windows)
 #===========================================================================
 
 # 3 innermost ring widths for pithless-cored trees in all plots
-inner_rings <- read.csv(here("data","PithlessTCs_InnerRingWidths.csv"), header = TRUE)
-inner_rings <- inner_rings %>% rename(patch = Patch, tree = Core_ID, ring = Ring_ID, width = Ring.Width) %>% 
+inner_rings_raw <- read.csv(here("data","PithlessTCs_InnerRingWidths.csv"), header = TRUE)
+inner_rings <- inner_rings_raw %>% 
+  rename(patch = Patch, tree = Core_ID, ring = Ring_ID, width = Ring.Width) %>% 
   mutate(ring = substring(ring, nchar(ring)))
 
 # arc length (L) and height (h) of first full ring
-duncan <- read.csv(here("data","Duncan_estimates.csv"), header = TRUE, na.strings = c("NA","#DIV/0!"))
-duncan <- duncan %>% rename(tree = `Core..`, h = H, width_1st_full_ring = X1st.full.ring,
-                            r = Missing.Distance.To.Pith..DTP.,
-                            width_inner3_rings = Width.innermost.3.rings..WI3R.,
-                            mean_width_inner3_rings = Mean.WI3R,
-                            rings_to_pith = Estimated...rings.to.pith..RTP.,
-                            subtract_if_not_arching = If.last.vis.ring.not.arching..extra.rings.to.subtract,
-                            rings_to_pith_adj = Adj.rings.to.pith,
-                            duplicate = Adj.rings.to.pith.values,
-                            downward_curvature = downward.curvature) %>% 
+# remove trees not present in inner_rings, those with unknown plot ("RLARGE01", "RLARGE02"),
+# and those in plot "R0X" ("R0XT01a")
+duncan_raw <- read.csv(here("data","Duncan_estimates.csv"), header = TRUE, na.strings = c("NA","#DIV/0!"))
+duncan <- duncan_raw %>% rename(tree = `Core..`, h = H, width_1st_full_ring = X1st.full.ring,
+                                r = Missing.Distance.To.Pith..DTP.,
+                                width_inner3_rings = Width.innermost.3.rings..WI3R.,
+                                mean_width_inner3_rings = Mean.WI3R,
+                                rings_to_pith = Estimated...rings.to.pith..RTP.,
+                                subtract_if_not_arching = If.last.vis.ring.not.arching..extra.rings.to.subtract,
+                                rings_to_pith_adj = Adj.rings.to.pith,
+                                duplicate = Adj.rings.to.pith.values,
+                                downward_curvature = downward.curvature) %>% 
   mutate(patch = inner_rings$patch[match(tree, inner_rings$tree)], .before = tree) %>% 
-  select(-duplicate) %>% filter(!is.na(patch)) # throw out trees not present in inner_rings
+  select(-duplicate) %>% filter(!is.na(patch) & !(tree %in% c("R0XT01a", "RLARGE01", "RLARGE02"))) 
 
 
 #===========================================================================

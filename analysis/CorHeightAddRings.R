@@ -59,10 +59,11 @@ harv <- harv_raw %>% group_by(Sapling) %>%
 cores_raw <- read.csv(here("data","PIUV_CoredProcessed.csv"), header = TRUE)
 
 # select & mutate predictor columns to match those used in the model
+# remove Cushion patch, R0X and NA plots
 cores <- cores_raw %>%
   select(Patch2, Plot, Individual, Cor_Height_cm) %>%
   rename(patch = Patch2, plot = Plot, tree = Individual, height = Cor_Height_cm) %>% 
-  filter(patch != "Cushion" & plot != "R0X" & !is.na(plot)) # remove Cushion patch, R0X and NA plots
+  filter(patch != "Cushion" & plot != "R0X" & !is.na(plot)) 
 
 #===========================================================================
 # COUNT GLMMs
