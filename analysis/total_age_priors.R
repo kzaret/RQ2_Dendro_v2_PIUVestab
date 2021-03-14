@@ -97,28 +97,27 @@ tree_age %>% mutate(tree = fct_reorder(.f = tree, .x = age, .fun = median)) %>%
 
 if(save_plot) dev.off()
 
-# # Credible intervals of posterior distribution of annual recruitment
-# # Note: takes a while
-# save_plot <- TRUE
-# if(save_plot) {
-#   png(filename=here("analysis", "results", "recruitment_intervals.png"),
-#       width=7, height=7, units="in", res=300, type="cairo-png")
-# } else dev.new()
-# 
-# recruitment %>% pivot_wider(id_cols = c(patch,year,iter), names_from = year, values_from = N) %>% 
-#   select(-c(patch, iter)) %>% # b/c pars arg to mcmc_intervals_data() does not work as advertised
-#   mcmc_intervals_data(prob = 0.8, prob_outer = 0.95) %>% 
-#   mutate(year = parameter, patch = recruitment$patch[match(year, recruitment$year)]) %>%
-#   ggplot(aes(x = year, y = m)) +
-#   geom_linerange(aes(ymin = l, ymax = h), size = 1.5, color = "darkgray") +
-#   geom_linerange(aes(ymin = ll, ymax = hh), size = 0.5, color = "darkgray") +
-#   geom_point(pch = 16, size = 1, alpha = 0.5) +
-#   xlab("Year") + ylab("Recruitment") + theme_bw(base_size = 16) + 
-#   theme(axis.ticks.x = element_blank(), axis.text.x = element_blank(),
-#         panel.grid = element_blank()) + 
-#   facet_wrap(vars(patch))
-# 
-# if(save_plot) dev.off()
+# Credible intervals of posterior distribution of annual recruitment
+# Note: takes a while
+save_plot <- TRUE
+if(save_plot) {
+  png(filename=here("analysis", "results", "recruitment_intervals.png"),
+      width=7, height=7, units="in", res=300, type="cairo-png")
+} else dev.new()
+
+recruitment %>% 
+  pivot_wider(id_cols = c(patch,year,iter), names_from = c(patch,year), values_from = N, values_fill = 0) %>%
+  select(-iter) %>% # b/c pars arg to mcmc_intervals_data() does not work as advertised
+  mcmc_intervals_data(point_est = "mean", prob = 0.8, prob_outer = 0.95) %>%
+  separate(parameter, c("patch","year"), sep = "_") %>% mutate(year = as.numeric(year)) %>% 
+  ggplot(aes(x = year, y = m)) +
+  geom_ribbon(aes(ymin = ll, ymax = hh), fill = "darkgray", alpha = 0.5) +
+  geom_line(alpha = 0.5) +
+  xlab("Year") + ylab("Recruitment") + 
+  theme_bw(base_size = 16) + theme(panel.grid = element_blank()) +
+  facet_wrap(vars(patch))
+
+if(save_plot) dev.off()
 
 
 
