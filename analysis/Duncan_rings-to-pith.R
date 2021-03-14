@@ -1,4 +1,4 @@
-## UNCERTAINTY ANALYSIS OF DUNCAN RING-TO-PITH CORRECTIONS
+## UNCERTAINTY ANALYSIS OF DUNCAN RINGS-TO-PITH CORRECTIONS
 ##
 ## Estimate uncertainty in Duncan (1989) adjustments for cores that missed the pith  
 ## Posterior of rings-to-pith, given sample of 3 innermost ring widths, will be used
@@ -9,6 +9,7 @@
 # SETUP
 #===========================================================================
 
+library(matrixStats)
 library(dplyr)
 library(forcats)
 library(rstanarm)
@@ -16,9 +17,7 @@ library(bayesplot)
 library(shinystan)
 library(ggplot2)
 library(ggridges)
-library(matrixStats)
 library(here)
-bayesplot_theme_set(bayesplot::theme_default())
 options(mc.cores = parallel::detectCores(logical = FALSE) - 1)
 if(.Platform$OS.type == "windows") options(device = windows)
 
@@ -93,9 +92,9 @@ data.frame(duncan_lmer$glmod$fr, resid = resid(duncan_lmer)) %>%
 
 
 #===========================================================================
-# DUNCAN RING-TO-PITH CORRECTIONS
+# DUNCAN RINGS-TO-PITH CORRECTIONS
 #
-# Compute Duncan ring-to-pith correction for each tree as r/d_hat,
+# Compute Duncan rings-to-pith correction for each tree as r/d_hat,
 # where the missing radius (r) is already calculated as r = L^2/(8*h) + h/2
 # and d_hat is the median inner ring width (more robust than mean for lognormally
 # distributed data) estimated by the hierarchical model
@@ -106,7 +105,16 @@ data.frame(duncan_lmer$glmod$fr, resid = resid(duncan_lmer)) %>%
 # if wanted mean instead, would need exp(mu + 0.5*sigma^2)
 d_hat <- exp(posterior_linpred(duncan_lmer, newdata = duncan))
 rtp <- sweep(1/d_hat, 2, duncan$r, "*")  # keep continuous version for plotting
-rings_to_pith <- round(rtp)
+
+# Attach posterior draws to data
+rings_to_pith <- data.frame(duncan[rep(1:nrow(duncan), each = nrow(rtp)), c("patch","tree")],
+                            iter = rep(1:nrow(rtp), nrow(duncan)), 
+                            rings_to_pith = as.vector(rtp))
+rownames(rings_to_pith) <- 1:nrow(rings_to_pith)
+
+# Save posterior draws and stanfit objects
+save(list = c("duncan_lmer", "rings_to_pith"), 
+     file = here("analysis","results","duncan_rings-to-pith.RData"))
 
 
 #===========================================================================
@@ -137,7 +145,7 @@ inner_rings %>% ggplot(aes(x = tree, y = width)) +
 
 if(save_plot) dev.off()
 
-# Credible intervals of posterior distribution of ring-to-pith estimates
+# Credible intervals of posterior distribution of rings-to-pith estimates
 save_plot <- TRUE
 if(save_plot) {
   png(filename=here("analysis", "results", "duncan_rings-to-pith_intervals.png"),
@@ -158,7 +166,7 @@ mcmc_intervals_data(rtp, prob = 0.8, prob_outer = 0.95) %>%
 
 if(save_plot) dev.off()
 
-# Joyplots of posterior distribution of ring-to-pith estimates
+# Joyplots of posterior distribution of rings-to-pith estimates
 ##   No words could explain, no actions determine
 ##   Just watching the trees and the leaves as they fall
 save_plot <- TRUE

@@ -8,6 +8,7 @@
 
 library(mlmRev) # for mlm tutorial (https://mc-stan.org/users/documentation/case-studies/tutorial_rstanarm.html)
 library(lme4)
+library(matrixStats)
 library(dplyr)
 library(forcats)
 library(ggplot2)
@@ -15,9 +16,7 @@ library(ggridges)
 library(rstanarm)
 library(bayesplot)
 library(shinystan)
-library(matrixStats)
 library(here)
-bayesplot_theme_set(bayesplot::theme_default())
 options(mc.cores = parallel::detectCores(logical = FALSE) - 1)
 if(.Platform$OS.type == "windows") options(device = windows)
 
@@ -61,8 +60,9 @@ cores_raw <- read.csv(here("data","PIUV_CoredProcessed.csv"), header = TRUE)
 # select & mutate predictor columns to match those used in the model
 # remove Cushion patch, R0X and NA plots
 cores <- cores_raw %>%
-  select(Patch2, Plot, Individual, Cor_Height_cm) %>%
-  rename(patch = Patch2, plot = Plot, tree = Individual, height = Cor_Height_cm) %>% 
+  select(Patch2, Plot, Year_coll, Individual, Cor_Height_cm, Status, Outer_rings, TR_Count) %>%
+  rename(patch = Patch2, plot = Plot, year = Year_coll, tree = Individual, height = Cor_Height_cm, 
+         status = Status, outer_rings = Outer_rings, ring_count = TR_Count) %>% 
   filter(patch != "Cushion" & plot != "R0X" & !is.na(plot)) 
 
 #===========================================================================
@@ -95,7 +95,7 @@ vignette("priors", package = 'rstanarm')
 harv_glmer1 <- stan_glmer(add_rings ~ patch + (1 | tree) + (1 | plot), 
                           offset = log(height), family = poisson, 
                           data = harv, subset = height > 0,
-                          chains = getOption("mc.cores"), iter = 2000, warmup = 1000) 
+                          chains = getOption("mc.cores"), iter = 5000, warmup = 1000) 
 
 prior_summary(harv_glmer1)
 print(harv_glmer1, digits=2)
@@ -161,7 +161,7 @@ ranef(harv_glmer1)$plot %>% rename(intercept = `(Intercept)`) %>%
 harv_glmer2_pois <- stan_glmer(diff_rings ~ patch + (1 | tree) + (1 | plot), 
                                offset = log(diff_height), family = poisson,
                                data = harv, na.action = na.omit,  
-                               chains = getOption("mc.cores"), iter = 3000, warmup = 1000) 
+                               chains = getOption("mc.cores"), iter = 5000, warmup = 1000) 
 
 prior_summary(harv_glmer2_pois)
 print(harv_glmer2_pois, digits=2)
@@ -174,7 +174,7 @@ harv_glmer2_nb <- stan_glmer(diff_rings ~ patch + (1 | tree) + (1 | plot),
                              offset = log(diff_height), family = neg_binomial_2,
                              prior_aux = exponential(0.1),
                              data = harv, na.action = na.omit,  
-                             chains = getOption("mc.cores"), iter = 3000, warmup = 1000) 
+                             chains = getOption("mc.cores"), iter = 5000, warmup = 1000) 
 
 prior_summary(harv_glmer2_nb)
 print(harv_glmer2_nb, digits=2)
@@ -317,8 +317,19 @@ if(save_plot) dev.off()
 # Choose your fighter
 mod <- harv_glmer2_nb
 
-arc <- posterior_epred(mod, newdata = cores, offset = log(cores$height))
-add_rings_cores <- round(arc)  # keep continuous version for log-scale plots
+# keep continuous version for log-scale plots
+arh <- posterior_epred(mod, newdata = cores, offset = log(cores$height))
+
+# Attach posterior draws to data
+add_rings_height <- data.frame(cores[rep(1:nrow(cores), each = nrow(arh)), ],
+                               iter = rep(1:nrow(arh), nrow(cores)),
+                               add_rings_height = as.vector(arh))
+rownames(add_rings_height) <- 1:nrow(add_rings_height)
+
+# Save posterior draws and stanfit objects
+save(list = c("harv_glmer2_pois", "harv_glmer2_nb", "add_rings_height"), 
+     file = here("analysis","results","coring_height_correction.RData"))
+
 
 #---------------------------------------------------------------------------
 # FIGURES 
@@ -331,7 +342,7 @@ if(save_plot) {
       width=7, height=7, units="in", res=300, type="cairo-png")
 } else dev.new()
 
-mcmc_intervals_data(arc, prob = 0.8, prob_outer = 0.95) %>% 
+mcmc_intervals_data(arh, prob = 0.8, prob_outer = 0.95) %>% 
   mutate(patch = cores$patch, tree = fct_reorder(cores$tree, .x = m, .fun = identity)) %>% 
   ggplot(aes(x = tree, y = m)) +
   geom_linerange(aes(ymin = l, ymax = h), size = 1.5, color = "darkgray") +
@@ -354,12 +365,12 @@ if(save_plot) {
       width=7, height=7, units="in", res=300, type="cairo-png")
 } else dev.new()
 
-data.frame(iter = rep(1:nrow(arc), ncol(arc)),
-           patch = rep(cores$patch, each = nrow(arc)),
-           tree = rep(cores$tree, each = nrow(arc)),
-           arc = as.vector(arc)) %>%
-  mutate(tree = fct_reorder(.f = tree, .x = arc, .fun = median)) %>% 
-  ggplot(aes(x = arc, y = tree, height = stat(density))) + 
+data.frame(iter = rep(1:nrow(arh), ncol(arh)),
+           patch = rep(cores$patch, each = nrow(arh)),
+           tree = rep(cores$tree, each = nrow(arh)),
+           arh = as.vector(arh)) %>%
+  mutate(tree = fct_reorder(.f = tree, .x = arh, .fun = median)) %>% 
+  ggplot(aes(x = arh, y = tree, height = stat(density))) + 
   geom_density_ridges(color = "white", fill = "black") +
   scale_x_log10(expand = expansion(0,0)) + scale_y_discrete(expand = expansion(mult = c(0.02,0.08))) +
   xlab("Additional rings at root-shoot boundary") + ylab("Tree") + theme_bw(base_size = 16) + 
