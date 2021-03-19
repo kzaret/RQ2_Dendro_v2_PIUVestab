@@ -85,7 +85,7 @@ tree_age %>% pivot_wider(id_cols = c(tree,iter), names_from = tree, values_from 
 
 if(save_plot) dev.off()
 
-# Joyplots of posterior distribution of rings-to-pith estimates
+# Joyplots of posterior distribution of age estimates
 save_plot <- TRUE
 if(save_plot) {
   png(filename=here("analysis", "results", "tree_age_joyplots.png"),
