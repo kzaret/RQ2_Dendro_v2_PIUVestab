@@ -64,7 +64,7 @@ recruitment <- as.data.frame(xtabs(~ iter + establishment_year + patch, tree_age
 #===========================================================================
 
 # Credible intervals of posterior distribution of age estimates
-save_plot <- TRUE
+save_plot <- FALSE
 if(save_plot) {
   png(filename=here("analysis", "results", "tree_age_intervals.png"),
       width=7, height=7, units="in", res=300, type="cairo-png")
@@ -85,8 +85,8 @@ tree_age %>% pivot_wider(id_cols = c(tree,iter), names_from = tree, values_from 
 
 if(save_plot) dev.off()
 
-# Joyplots of posterior distribution of rings-to-pith estimates
-save_plot <- TRUE
+# Joyplots of posterior distribution of age estimates
+save_plot <- FALSE
 if(save_plot) {
   png(filename=here("analysis", "results", "tree_age_joyplots.png"),
       width=7, height=7, units="in", res=300, type="cairo-png")
@@ -121,7 +121,6 @@ recruitment %>%
   ggplot(aes(x = year, y = m)) +
   geom_ribbon(aes(ymin = ll, ymax = hh), fill = "black", alpha = 0.3) +
   geom_line(alpha = 0.5, lwd = 1) +
-  scale_y_continuous(breaks = seq(0, max(hh))) +
   labs(x = "Year", y = "Recruitment") + theme_bw(base_size = 16) + 
   theme(panel.grid = element_blank(), plot.margin = unit(c(5.5, 15, 5.5, 5.5), "points"),
         panel.spacing = unit(15, "points")) +
