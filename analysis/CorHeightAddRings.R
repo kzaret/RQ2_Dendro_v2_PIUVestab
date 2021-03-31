@@ -47,9 +47,11 @@ cores_raw <- read.csv(here("data","PIUV_CoredProcessed.csv"), header = TRUE)
 # remove Cushion patch, R0X and NA plots, and cores w/ remove == 1 (nonrandomly sampled or damaged) 
 cores <- cores_raw %>%
   select(Patch2, Plot, Year_coll, Individual, Cor_Height_cm, Status, Outer_rings, 
-         ORW, Remove, min_age, TR_Count) %>%
-  rename(patch = Patch2, plot = Plot, year = Year_coll, tree = Individual, height = Cor_Height_cm, 
-         status = Status, outer_rings = Outer_rings, orw = ORW, remove = Remove, ring_count = TR_Count) %>% 
+         ORW, Remove, min_age, TR_Count, height_error_u95_cm) %>%
+  rename(patch = Patch2, plot = Plot, year = Year_coll, tree = Individual, 
+         height = Cor_Height_cm, status = Status, outer_rings = Outer_rings, orw = ORW,
+         remove = Remove, ring_count = TR_Count, height_error_u95 = height_error_u95_cm) %>% 
+  mutate(height_SD = height_error_u95/qnorm(0.975)) %>% 
   filter(patch != "Cushion" & plot != "R0X" & !is.na(plot) & remove == 0) 
 
 #===========================================================================
