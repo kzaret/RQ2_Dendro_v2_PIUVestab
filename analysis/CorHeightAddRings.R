@@ -7,15 +7,16 @@
 #===========================================================================
 
 library(mlmRev) # for mlm tutorial (https://mc-stan.org/users/documentation/case-studies/tutorial_rstanarm.html)
-library(lme4)
 library(matrixStats)
 library(dplyr)
+library(tidyr)
 library(forcats)
-library(ggplot2)
-library(ggridges)
 library(rstanarm)
 library(bayesplot)
 library(shinystan)
+library(truncnorm)
+library(ggplot2)
+library(ggridges)
 library(here)
 options(mc.cores = parallel::detectCores(logical = FALSE) - 1)
 if(.Platform$OS.type == "windows") options(device = windows)
@@ -44,6 +45,7 @@ harv <- harv_raw %>% group_by(Sapling) %>%
 cores_raw <- read.csv(here("data","PIUV_CoredProcessed.csv"), header = TRUE)
 
 # select & mutate predictor columns to match those used in the model
+# compute height measurement error SD
 # remove Cushion patch, R0X and NA plots, and cores w/ remove == 1 (nonrandomly sampled or damaged) 
 cores <- cores_raw %>%
   select(Patch2, Plot, Year_coll, Individual, Cor_Height_cm, Status, Outer_rings, 
@@ -295,10 +297,11 @@ if(save_plot) dev.off()
 
 
 #===========================================================================
-# CORING-HEIGHT CORRECTIONS
+# CORING-HEIGHT CORRECTIONS INCLUDING HEIGHT MEASUREMENT ERROR
 #
-# Posterior distribution of expected additional ring counts 
-# (from root-shoot boundary) for cored trees 
+# Generate coring height from zero-truncated normal measurement error prior
+# => Unconditional posterior of expected additional ring counts
+# (from root-shoot boundary) 
 # Plots without harvested saplings have plot-level coefficients drawn
 # from the hyperdistribution
 #===========================================================================
@@ -306,14 +309,18 @@ if(save_plot) dev.off()
 # Choose your fighter
 mod <- harv_glmer2_nb
 
-# keep continuous version for log-scale plots
-arh <- posterior_epred(mod, newdata = cores, offset = log(cores$height))
+# Generate prior draws of height with measurement error
+# and posterior draws of expected additional rings / cm
+# Adjust using measurement error prior as height offset
+height_prior <- t(sapply(1:nsamples(mod), rtruncnorm, n = 1, mean = cores$height, 
+                         sd = cores$height_SD, a = 0))
+add_rings_cm <- posterior_epred(mod, newdata = cores, offset = 0)
+add_rings <- add_rings_cm + log(height_prior)
 
 # Attach posterior draws to data
-add_rings_height <- data.frame(cores[rep(1:nrow(cores), each = nrow(arh)), ],
-                               iter = rep(1:nrow(arh), nrow(cores)),
-                               add_rings_height = as.vector(arh))
-rownames(add_rings_height) <- 1:nrow(add_rings_height)
+add_rings_height <- cores %>% cbind(as.data.frame(t(add_rings))) %>% 
+  pivot_longer(cols = starts_with("V"), names_to = "iter", names_prefix = "V", 
+               values_to = "add_rings_height") %>% as.data.frame()
 
 # Save posterior draws and stanfit objects
 save(list = c("harv_glmer2_pois", "harv_glmer2_nb", "add_rings_height"), 
@@ -331,7 +338,7 @@ if(save_plot) {
       width=7, height=7, units="in", res=300, type="cairo-png")
 } else dev.new()
 
-mcmc_intervals_data(arh, prob = 0.8, prob_outer = 0.95) %>% 
+mcmc_intervals_data(add_rings, prob = 0.8, prob_outer = 0.95) %>% 
   mutate(patch = cores$patch, tree = fct_reorder(cores$tree, .x = m, .fun = identity)) %>% 
   ggplot(aes(x = tree, y = m)) +
   geom_linerange(aes(ymin = l, ymax = h), size = 1.5, color = "darkgray") +
@@ -345,7 +352,7 @@ mcmc_intervals_data(arh, prob = 0.8, prob_outer = 0.95) %>%
 
 if(save_plot) dev.off()
 
-# Joyplots of posterior distribution of ring-to-pith estimates
+# Joyplots of posterior distribution of additional rings
 ##   No words could explain, no actions determine
 ##   Just watching the trees and the leaves as they fall
 save_plot <- TRUE
@@ -354,14 +361,11 @@ if(save_plot) {
       width=7, height=7, units="in", res=300, type="cairo-png")
 } else dev.new()
 
-data.frame(iter = rep(1:nrow(arh), ncol(arh)),
-           patch = rep(cores$patch, each = nrow(arh)),
-           tree = rep(cores$tree, each = nrow(arh)),
-           arh = as.vector(arh)) %>%
-  mutate(tree = fct_reorder(.f = tree, .x = arh, .fun = median)) %>% 
-  ggplot(aes(x = arh, y = tree, height = stat(density))) + 
+add_rings_height %>%
+  mutate(tree = fct_reorder(.f = tree, .x = add_rings, .fun = median)) %>% 
+  ggplot(aes(x = add_rings, y = tree, height = stat(density))) + 
   geom_density_ridges(color = "white", fill = "black") +
-  scale_x_log10(expand = expansion(0,0)) + scale_y_discrete(expand = expansion(mult = c(0.02,0.08))) +
+  scale_x_continuous(expand = expansion(0,0)) + scale_y_discrete(expand = expansion(mult = c(0.02,0.08))) +
   xlab("Additional rings at root-shoot boundary") + ylab("Tree") + theme_bw(base_size = 16) + 
   theme(axis.text.y = element_blank(), axis.ticks.y = element_blank(), panel.grid = element_blank(), 
         panel.background = element_rect(fill = "black", color = "black"), panel.border = element_blank(),
