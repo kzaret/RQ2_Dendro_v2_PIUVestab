@@ -362,8 +362,8 @@ if(save_plot) {
 } else dev.new()
 
 add_rings_height %>%
-  mutate(tree = fct_reorder(.f = tree, .x = add_rings, .fun = median)) %>% 
-  ggplot(aes(x = add_rings, y = tree, height = stat(density))) + 
+  mutate(tree = fct_reorder(.f = tree, .x = add_rings_height, .fun = median)) %>% 
+  ggplot(aes(x = add_rings_height, y = tree, height = stat(density))) + 
   geom_density_ridges(color = "white", fill = "black") +
   scale_x_log10(limits = c(1,NA), expand = expansion(0,0)) + 
   scale_y_discrete(expand = expansion(mult = c(0.02,0.08))) +
