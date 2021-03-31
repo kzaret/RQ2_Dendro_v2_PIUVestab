@@ -25,23 +25,9 @@ if(.Platform$OS.type == "windows") options(device = windows)
 #===========================================================================
 
 ## Harvested PIUV from all patches
-harv_raw <- read.csv(here("data","RC_Height_cross_sections.csv"), header = TRUE)
-
-# Notes:  
-# harv includes dummy data such that each tree has a basal CS (height = 0) 
+# includes dummy data such that each tree has a basal CS (height = 0) 
 # and add. rings = 0 for each basal CS.
-# pot_outlier = 1 if had been removed when fitting linear regressions and/or 
-# given abnormal ring counts in consecutive rounds.
-# Re Bog forest outliers:  
-# For linear regressions, had removed BF0802 entirely [9 cross sections] due to 
-# nonlinear growth pattern that differs from the rest of the harvested trees.  
-# It’s also one of the older BF trees. 
-# Removed cross-sections 06, 05 and 04 from BF0902 
-# (bc ring counts of 92, 91, 90 and 90 in a row and notes re 04 being rotten 
-# and may want to leave out). 
-# Removed ff bc high on stem and no cross sections in between:  
-# BF0303_110to112, BF0305_100to102. Removed BF0202 [5 cross sections]. 
-# Removed BF0301_110to112.
+harv_raw <- read.csv(here("data","RC_Height_cross_sections.csv"), header = TRUE)
 
 # Change nonzero ring counts at height==0 to zeros (affects one row)
 # Add first-differenced section height and ring counts (for V.2 of GLMM)
