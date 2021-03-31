@@ -315,7 +315,7 @@ mod <- harv_glmer2_nb
 height_prior <- t(sapply(1:nsamples(mod), rtruncnorm, n = 1, mean = cores$height, 
                          sd = cores$height_SD, a = 0))
 add_rings_cm <- posterior_epred(mod, newdata = cores, offset = 0)
-add_rings <- add_rings_cm + log(height_prior)
+add_rings <- add_rings_cm * height_prior
 
 # Attach posterior draws to data
 add_rings_height <- cores %>% cbind(as.data.frame(t(add_rings))) %>% 
@@ -365,7 +365,8 @@ add_rings_height %>%
   mutate(tree = fct_reorder(.f = tree, .x = add_rings, .fun = median)) %>% 
   ggplot(aes(x = add_rings, y = tree, height = stat(density))) + 
   geom_density_ridges(color = "white", fill = "black") +
-  scale_x_continuous(expand = expansion(0,0)) + scale_y_discrete(expand = expansion(mult = c(0.02,0.08))) +
+  scale_x_log10(limits = c(1,NA), expand = expansion(0,0)) + 
+  scale_y_discrete(expand = expansion(mult = c(0.02,0.08))) +
   xlab("Additional rings at root-shoot boundary") + ylab("Tree") + theme_bw(base_size = 16) + 
   theme(axis.text.y = element_blank(), axis.ticks.y = element_blank(), panel.grid = element_blank(), 
         panel.background = element_rect(fill = "black", color = "black"), panel.border = element_blank(),
