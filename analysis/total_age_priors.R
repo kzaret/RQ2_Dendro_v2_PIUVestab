@@ -64,7 +64,7 @@ recruitment <- as.data.frame(xtabs(~ iter + establishment_year + patch, tree_age
 #===========================================================================
 
 # Credible intervals of posterior distribution of age estimates
-save_plot <- FALSE
+save_plot <- TRUE
 if(save_plot) {
   png(filename=here("analysis", "results", "tree_age_intervals.png"),
       width=7, height=7, units="in", res=300, type="cairo-png")
@@ -86,7 +86,7 @@ tree_age %>% pivot_wider(id_cols = c(tree,iter), names_from = tree, values_from 
 if(save_plot) dev.off()
 
 # Joyplots of posterior distribution of age estimates
-save_plot <- FALSE
+save_plot <- TRUE
 if(save_plot) {
   png(filename=here("analysis", "results", "tree_age_joyplots.png"),
       width=7, height=7, units="in", res=300, type="cairo-png")
@@ -107,7 +107,7 @@ if(save_plot) dev.off()
 
 # Credible intervals of posterior distribution of annual recruitment
 # Note: takes a while
-save_plot <- FALSE
+save_plot <- TRUE
 if(save_plot) {
   png(filename=here("analysis", "results", "recruitment_intervals.png"),
       width=8, height=6, units="in", res=300, type="cairo-png")
