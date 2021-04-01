@@ -319,8 +319,9 @@ add_rings <- add_rings_cm * height_prior
 
 # Attach posterior draws to data
 add_rings_height <- cores %>% cbind(as.data.frame(t(add_rings))) %>% 
-  pivot_longer(cols = starts_with("V"), names_to = "iter", names_prefix = "V", 
-               values_to = "add_rings_height") %>% as.data.frame()
+  pivot_longer(cols = starts_with("V"), values_to = "add_rings_height", 
+               names_to = "iter", names_prefix = "V", 
+               names_transform = list(iter = as.numeric)) %>% as.data.frame()
 
 # Save posterior draws and stanfit objects
 save(list = c("harv_glmer2_pois", "harv_glmer2_nb", "add_rings_height"), 
