@@ -124,10 +124,7 @@ save(list = c("duncan_lmer", "rings_to_pith"),
 # Dotplots of ring width by core
 # Overlay violin plots of PPD
 save_plot <- TRUE
-if(save_plot) {
-  png(filename=here("analysis", "results", "duncan_lmer_ppd_violins.png"),
-      width=7, height=7, units="in", res=300, type="cairo-png")
-} else dev.new()
+dev.new()
 
 dat <- data.frame(iter = rep(indx, ncol(yrep)),
                   patch = rep(duncan_lmer$glmod$fr$patch, each = length(indx)),
@@ -143,14 +140,13 @@ inner_rings %>% ggplot(aes(x = tree, y = width)) +
   theme(axis.ticks.x = element_blank(), axis.text.x = element_blank()) + 
   facet_wrap(vars(patch), scales = "free_x")
 
-if(save_plot) dev.off()
+if(save_plot) 
+  ggsave(filename=here("analysis", "results", "duncan_lmer_ppd_violins.png"),
+         width=7, height=7, units="in", dpi=300, type="cairo-png")
 
 # Credible intervals of posterior distribution of rings-to-pith estimates
 save_plot <- TRUE
-if(save_plot) {
-  png(filename=here("analysis", "results", "duncan_rings-to-pith_intervals.png"),
-      width=7, height=7, units="in", res=300, type="cairo-png")
-} else dev.new()
+dev.new()
 
 mcmc_intervals_data(rtp, prob = 0.8, prob_outer = 0.95) %>% 
   mutate(patch = duncan$patch, tree = fct_reorder(duncan$tree, .x = m, .fun = identity)) %>% 
@@ -164,16 +160,15 @@ mcmc_intervals_data(rtp, prob = 0.8, prob_outer = 0.95) %>%
         panel.grid = element_blank()) + 
   facet_wrap(vars(patch), scales = "free")
 
-if(save_plot) dev.off()
+if(save_plot) 
+  ggsave(filename=here("analysis", "results", "duncan_rings-to-pith_intervals.png"),
+         width=7, height=7, units="in", dpi=300, type="cairo-png")
 
 # Joyplots of posterior distribution of rings-to-pith estimates
 ##   No words could explain, no actions determine
 ##   Just watching the trees and the leaves as they fall
 save_plot <- TRUE
-if(save_plot) {
-  png(filename=here("analysis", "results", "duncan_rings-to-pith_joyplots.png"),
-      width=7, height=7, units="in", res=300, type="cairo-png")
-} else dev.new()
+dev.new()
 
 data.frame(iter = rep(nrow(rtp), ncol(rtp)),
            patch = rep(duncan$patch, each = nrow(rtp)),
@@ -190,7 +185,9 @@ data.frame(iter = rep(nrow(rtp), ncol(rtp)),
         strip.text = element_text(color = "white")) +
   facet_wrap(vars(patch), scales = "free")
 
-if(save_plot) dev.off()
+if(save_plot) 
+  ggsave(filename=here("analysis", "results", "duncan_rings-to-pith_joyplots.png"),
+         width=7, height=7, units="in", dpi=300, type="cairo-png")
 
 
          

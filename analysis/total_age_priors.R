@@ -65,10 +65,7 @@ recruitment <- as.data.frame(xtabs(~ iter + establishment_year + patch, tree_age
 
 # Credible intervals of posterior distribution of age estimates
 save_plot <- TRUE
-if(save_plot) {
-  png(filename=here("analysis", "results", "tree_age_intervals.png"),
-      width=7, height=7, units="in", res=300, type="cairo-png")
-} else dev.new()
+dev.new()
 
 tree_age %>% pivot_wider(id_cols = c(tree,iter), names_from = tree, values_from = age) %>% 
   select(-iter) %>% mcmc_intervals_data(prob = 0.8, prob_outer = 0.95) %>% 
@@ -83,14 +80,13 @@ tree_age %>% pivot_wider(id_cols = c(tree,iter), names_from = tree, values_from 
         panel.grid = element_blank()) + 
   facet_wrap(vars(patch), scales = "free_x")
 
-if(save_plot) dev.off()
+if(save_plot) 
+  ggsave(filename=here("analysis", "results", "tree_age_intervals.png"),
+         width=7, height=7, units="in", dpi=300, type="cairo-png")
 
 # Joyplots of posterior distribution of age estimates
 save_plot <- TRUE
-if(save_plot) {
-  png(filename=here("analysis", "results", "tree_age_joyplots.png"),
-      width=7, height=7, units="in", res=300, type="cairo-png")
-} else dev.new()
+dev.new()
 
 tree_age %>% mutate(tree = fct_reorder(.f = tree, .x = age, .fun = median)) %>% 
   ggplot(aes(x = age, y = tree, height = stat(density))) + 
@@ -103,15 +99,14 @@ tree_age %>% mutate(tree = fct_reorder(.f = tree, .x = age, .fun = median)) %>%
         strip.text = element_text(color = "white")) +
   facet_wrap(vars(patch), scales = "free")
 
-if(save_plot) dev.off()
+if(save_plot) 
+  ggsave(filename=here("analysis", "results", "tree_age_joyplots.png"),
+         width=7, height=7, units="in", dpi=300, type="cairo-png")
 
 # Credible intervals of posterior distribution of annual recruitment
 # Note: takes a while
 save_plot <- TRUE
-if(save_plot) {
-  png(filename=here("analysis", "results", "recruitment_intervals.png"),
-      width=8, height=6, units="in", res=300, type="cairo-png")
-} else dev.new(width=8, height=6)
+dev.new(width=8, height=6)
 
 recruitment %>% 
   pivot_wider(id_cols = c(patch,year,iter), names_from = c(patch,year), values_from = N, values_fill = 0) %>%
@@ -126,7 +121,9 @@ recruitment %>%
         panel.spacing = unit(15, "points")) +
   facet_wrap(vars(patch), scales = "free_y")
 
-if(save_plot) dev.off()
+if(save_plot) 
+  ggsave(filename=here("analysis", "results", "recruitment_intervals.png"),
+         width=8, height=6, units="in", dpi=300, type="cairo-png")
 
 
 

@@ -231,10 +231,7 @@ ranef(mod)$plot %>% rename(intercept = `(Intercept)`) %>%
 # Dotplots of rings/cm by sapling
 # Overlay violin plots of PPD
 save_plot <- TRUE
-if(save_plot) {
-  png(filename=here("analysis", "results", paste0("harv_GLMMv2_", mod$family$family, "_fits.png")),
-      width=7, height=7, units="in", res=300, type="cairo-png")
-} else dev.new()
+dev.new()
 
 dat <- data.frame(iter = rep(indx, ncol(yrep)),
                   patch = rep(mod$glmod$fr$patch, each = length(indx)),
@@ -252,7 +249,9 @@ harv %>% ggplot(aes(x = tree, y = diff_rings / diff_height)) +
   facet_wrap(vars(patch), scales = "free_x") + 
   ggtitle(mod$family$family)
 
-if(save_plot) dev.off()
+if(save_plot) 
+  ggsave(filename=here("analysis", "results", paste0("harv_GLMMv2_", mod$family$family, "_fits.png")),
+         width=7, height=7, units="in", dpi=300, type="cairo-png")
 
 # Extrapolate model fitted to incremental ring counts to predict total additional rings
 # from root-shoot boundary
@@ -276,10 +275,7 @@ pre_ppd_stats <- colQuantiles(pre_ppd, probs = c(0.025, 0.5, 0.975)) %>%
 # Cumulative additional rings vs. height, grouped by patch
 # Overlay posterior distribution (median and 95% credible interval) of expectation and PPD
 save_plot <- TRUE
-if(save_plot) {
-  png(filename=here("analysis", "results", paste0("harv_GLMMv2_", mod$family$family, "_predict_AddRings.png")),
-      width=7, height=7, units="in", res=300, type="cairo-png")
-} else dev.new()
+dev.new()
 
 harv %>% ggplot(aes(height, add_rings, group = tree)) +
   geom_ribbon(aes(x = diff_height, ymin = lo, ymax = up), inherit.aes = FALSE,
@@ -293,7 +289,9 @@ harv %>% ggplot(aes(height, add_rings, group = tree)) +
   theme_bw() + facet_wrap(vars(patch), ncol = 2) + 
   ggtitle(paste("GLMMv2", mod$family$family))
 
-if(save_plot) dev.off()
+if(save_plot) 
+  ggsave(filename=here("analysis", "results", paste0("harv_GLMMv2_", mod$family$family, "_predict_AddRings.png")),
+         width=7, height=7, units="in", dpi=300, type="cairo-png")
 
 
 #===========================================================================
@@ -334,10 +332,7 @@ save(list = c("harv_glmer2_pois", "harv_glmer2_nb", "add_rings_height"),
 
 # Credible intervals of posterior distribution of additional rings
 save_plot <- TRUE
-if(save_plot) {
-  png(filename=here("analysis", "results", "coring-height-correction_intervals.png"),
-      width=7, height=7, units="in", res=300, type="cairo-png")
-} else dev.new()
+dev.new()
 
 mcmc_intervals_data(add_rings, prob = 0.8, prob_outer = 0.95) %>% 
   mutate(patch = cores$patch, tree = fct_reorder(cores$tree, .x = m, .fun = identity)) %>% 
@@ -351,16 +346,15 @@ mcmc_intervals_data(add_rings, prob = 0.8, prob_outer = 0.95) %>%
         panel.grid = element_blank()) + 
   facet_wrap(vars(patch), scales = "free")
 
-if(save_plot) dev.off()
+if(save_plot) 
+  ggsave(filename=here("analysis", "results", "coring-height-correction_intervals.png"),
+         width=7, height=7, units="in", dpi=300, type="cairo-png")
 
 # Joyplots of posterior distribution of additional rings
 ##   No words could explain, no actions determine
 ##   Just watching the trees and the leaves as they fall
 save_plot <- TRUE
-if(save_plot) {
-  png(filename=here("analysis", "results", "coring-height-correction_joyplots.png"),
-      width=7, height=7, units="in", res=300, type="cairo-png")
-} else dev.new()
+dev.new()
 
 add_rings_height %>%
   mutate(tree = fct_reorder(.f = tree, .x = add_rings_height, .fun = median)) %>% 
@@ -375,7 +369,9 @@ add_rings_height %>%
         strip.text = element_text(color = "white")) +
   facet_wrap(vars(patch), scales = "free")
 
-if(save_plot) dev.off()
+if(save_plot) 
+  ggsave(filename=here("analysis", "results", "coring-height-correction_joyplots.png"),
+         width=7, height=7, units="in", dpi=300, type="cairo-png")
 
 
 
