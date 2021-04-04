@@ -110,8 +110,7 @@ dev.new(width=8, height=6)
 
 recruitment %>% 
   pivot_wider(id_cols = c(patch,year,iter), names_from = c(patch,year), values_from = N, values_fill = 0) %>%
-  select(-iter) %>% # b/c pars arg to mcmc_intervals_data() does not work as advertised
-  mcmc_intervals_data(point_est = "mean", prob = 0.8, prob_outer = 0.95) %>%
+  mcmc_intervals_data(pars = vars(-iter), point_est = "mean", prob = 0.8, prob_outer = 0.95) %>%
   separate(parameter, c("patch","year"), sep = "_") %>% mutate(year = as.numeric(year)) %>% 
   ggplot(aes(x = year, y = m)) +
   geom_ribbon(aes(ymin = ll, ymax = hh), fill = "black", alpha = 0.3) +
