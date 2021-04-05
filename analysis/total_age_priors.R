@@ -19,7 +19,6 @@ library(rstanarm)
 library(ggplot2)
 library(bayesplot)
 library(ggridges)
-library(denstrip)
 library(here)
 if(.Platform$OS.type == "windows") options(device = windows)
 
@@ -118,7 +117,7 @@ recruitment %>%
   ggplot(aes(x = year, y = m)) +
   geom_ribbon(aes(ymin = ll, ymax = hh), fill = "darkgray", alpha = 0.5) +
   geom_line(alpha = 0.5, lwd = 1) +
-  labs(x = "Year", y = "Recruitment") + theme_bw(base_size = 16) + 
+  labs(x = "Establishment year", y = "Count") + theme_bw(base_size = 16) + 
   scale_x_continuous(breaks = function(v) { s <- round(min(v):max(v)); s[s %% 100 == 0] }, 
                      minor_breaks = function(v) { s <- round(min(v):max(v)); s[s %% 50 == 0] }) +
   theme(axis.text = element_text(size = 12),
@@ -132,7 +131,4 @@ recruitment %>%
 if(save_plot) 
   ggsave(filename=here("analysis", "results", "recruitment_intervals.png"),
          width=9, height=6, units="in", dpi=300, type="cairo-png")
-
-
-
 
