@@ -19,6 +19,7 @@ library(rstanarm)
 library(ggplot2)
 library(bayesplot)
 library(ggridges)
+library(denstrip)
 library(here)
 if(.Platform$OS.type == "windows") options(device = windows)
 
@@ -106,7 +107,7 @@ if(save_plot)
 # Credible intervals of posterior distribution of annual recruitment
 # Note: takes a while
 save_plot <- TRUE
-dev.new(width=8, height=6)
+dev.new(width=9, height=6)
 
 recruitment %>% 
   pivot_wider(id_cols = c(patch,year,iter), names_from = c(patch,year), values_from = N, values_fill = 0) %>%
@@ -118,8 +119,10 @@ recruitment %>%
   geom_ribbon(aes(ymin = ll, ymax = hh), fill = "darkgray", alpha = 0.5) +
   geom_line(alpha = 0.5, lwd = 1) +
   labs(x = "Year", y = "Recruitment") + theme_bw(base_size = 16) + 
-  scale_x_continuous(minor_breaks = function(v) { s <- round(min(v):max(v)); s[s %% 50 == 0] }) +
-  theme(panel.grid.major.x = element_line(size = 0.5),
+  scale_x_continuous(breaks = function(v) { s <- round(min(v):max(v)); s[s %% 100 == 0] }, 
+                     minor_breaks = function(v) { s <- round(min(v):max(v)); s[s %% 50 == 0] }) +
+  theme(axis.text = element_text(size = 12),
+        panel.grid.major.x = element_line(size = 0.5),
         panel.grid.minor.x = element_line(size = 0.5),
         panel.grid.major.y = element_blank(), panel.grid.minor.y = element_blank(),
         plot.margin = unit(c(5.5, 15, 5.5, 5.5), "points"), 
@@ -128,7 +131,7 @@ recruitment %>%
 
 if(save_plot) 
   ggsave(filename=here("analysis", "results", "recruitment_intervals.png"),
-         width=8, height=6, units="in", dpi=300, type="cairo-png")
+         width=9, height=6, units="in", dpi=300, type="cairo-png")
 
 
 
