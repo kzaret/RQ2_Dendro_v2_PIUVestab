@@ -111,14 +111,20 @@ dev.new(width=8, height=6)
 recruitment %>% 
   pivot_wider(id_cols = c(patch,year,iter), names_from = c(patch,year), values_from = N, values_fill = 0) %>%
   mcmc_intervals_data(pars = vars(-iter), point_est = "mean", prob = 0.8, prob_outer = 0.95) %>%
-  separate(parameter, c("patch","year"), sep = "_") %>% mutate(year = as.numeric(year)) %>% 
+  separate(parameter, c("patch","year"), sep = "_") %>% group_by(patch) %>% 
+  mutate(year = as.numeric(year), N = sum(m), patch_nospace = gsub(" ", "~", patch),
+         patch_N = paste0(patch_nospace, "~(italic(N)==", N, ")")) %>%  
   ggplot(aes(x = year, y = m)) +
-  geom_ribbon(aes(ymin = ll, ymax = hh), fill = "black", alpha = 0.3) +
+  geom_ribbon(aes(ymin = ll, ymax = hh), fill = "darkgray", alpha = 0.5) +
   geom_line(alpha = 0.5, lwd = 1) +
   labs(x = "Year", y = "Recruitment") + theme_bw(base_size = 16) + 
-  theme(panel.grid = element_blank(), plot.margin = unit(c(5.5, 15, 5.5, 5.5), "points"),
+  scale_x_continuous(minor_breaks = function(v) { s <- round(min(v):max(v)); s[s %% 50 == 0] }) +
+  theme(panel.grid.major.x = element_line(size = 0.5),
+        panel.grid.minor.x = element_line(size = 0.5),
+        panel.grid.major.y = element_blank(), panel.grid.minor.y = element_blank(),
+        plot.margin = unit(c(5.5, 15, 5.5, 5.5), "points"), 
         panel.spacing = unit(15, "points")) +
-  facet_wrap(vars(patch), scales = "free_y")
+  facet_wrap(vars(patch_N), labeller = label_parsed, scales = "free")
 
 if(save_plot) 
   ggsave(filename=here("analysis", "results", "recruitment_intervals.png"),
