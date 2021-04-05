@@ -69,12 +69,12 @@ This state-space model is analogous to a Poisson GLMM with log link function, wh
 Our first modification to the standard Poisson state-space model is to disaggregate the count $y_t$ into a vector of $t$ repeated $y_t$ times. To do this, we exploit the well-known relationship between the [Poisson and multinomial distributions](https://online.stat.psu.edu/stat504/node/48/). The Poisson is closed under addition, and the joint distribution of a set of $J$ independent Poisson random variables $Y_j$ with means $\lambda_j$ can be factored into a Poisson marginal distribution for the sum and a multinomial conditional distribution for the counts, given their sum:
 
 $$
-P(\mathbf{y} | \boldsymbol{\lambda}) = 
+\textrm{Pois}(\mathbf{y} | \boldsymbol{\lambda}) = 
 \textrm{Pois}(N | \Lambda) ~
 \textrm{Multinom} (\mathbf{y} | N, \boldsymbol{\pi}),
 $$
 
-where $\Lambda = \sum_{j}{\lambda_j}$, $N = \sum_{j}{y_j}$ and $\boldsymbol{\pi} = \boldsymbol{\lambda} / \Lambda$. 
+where $N = \sum_{j}{y_j}$, $\Lambda = \sum_{j}{\lambda_j}$ and $\boldsymbol{\pi} = \boldsymbol{\lambda} / \Lambda$. 
 
 This conditional relationship implies that both formulations will produce equivalent likelihood functions. This fact is often used in the reverse direction, when fitting surrogate Poisson log-linear GLMs to multinomial data summarized in contingency tables. Even when the sample size $N$ is fixed by design and thus the multinomial by itself could be used to model the cell frequencies, it is more convenient to work with the Poisson because the elements of $\boldsymbol{\lambda}$ are independent, unlike $\boldsymbol{\pi}$ under the sum-to-one constraint. For our purposes, though, the conditional multinomial is more useful. Since a multinomial sample of size $N$ is just the sum of $N$ IID categorical trials (in the same way that a binomial random variable is the sum of Bernoulli trials), each trial $i = 1, ..., N$ can be considered as a conditionally independent data point.
 
@@ -227,7 +227,7 @@ The time-uncertain Poisson-multinomial model does quite well with these data. As
 <<plot_tobs>>
 ```
 
-Relative to the true counts $\boldsymbol{\chi}$, the observed counts $\mathbf{y}$ are not linearly translated rightward, but smeared to the right by the mixture of individual geometrically distributed aging errors. While the Poisson-multinomial model fitted to the true counts does an excellent job of "seeing through" the Poisson observation error to recover the states, the naive approach to fitting the time-uncertain observations produces badly biased estimates that, like the data, are shifted to the right. The time-uncertain model, however, is able to reconstruct the underlying states quite faithfully. The posterior of the process model is a little smoother (less wiggliness, more shrinkage) and a bit more uncertain than in the ideal case, but this is a small price to pay for the ability to correct for ageing error and avoid catastrophic bias caused by ignoring it.
+Relative to the true counts $\boldsymbol{\chi}$, the observed counts $\mathbf{y}$ are not linearly translated rightward, but jittered to the right by the mixture of individual geometrically distributed aging errors. While the Poisson-multinomial model fitted to the true counts does an excellent job of "seeing through" the Poisson observation error to recover the states, the naive approach to fitting the time-uncertain observations produces badly biased estimates that, like the data, are shifted to the right. The time-uncertain model, however, is able to reconstruct the underlying states quite faithfully. The posterior of the process model is a little smoother (less wiggliness, more shrinkage) and a bit more uncertain than in the ideal case, but this is a small price to pay for the ability to correct for ageing error and avoid catastrophic bias caused by ignoring it.
 
 ## Prospectus
 
