@@ -19,9 +19,15 @@ data {
 transformed data {
   int<lower=0> N = sum(y);  // sum of all counts  
   vector<lower=1>[T] t1T;   // 1:T
+  matrix<lower=0>[T,T] gamma = rep_matrix(0,T,T); // conditional likelihood P(t | tau, r) 
   
   for(t in 1:T) 
     t1T[t] = t;
+  
+  // Geometric observation error likelihood of observed time t (rows) 
+  // given discrete latent state tau = 1, ..., T (cols)
+  for(tau in 1:T)
+    gamma[tau:T,tau] = geometric_pmf(t1T[tau:T] - tau, r);
 }
 
 parameters {
@@ -43,8 +49,7 @@ model {
   vector[T] lambda = exp(x);          // means
   real sum_lambda = sum(lambda);      // sum of means
   vector[T] pi = lambda/sum_lambda;   // cell probabilities
-  vector[T] gamma = rep_vector(0,T);  // marginal likelihood of observed t
-  
+
   // Priors
   sigma ~ normal(0,3);
   
@@ -55,8 +60,6 @@ model {
   // Marginal likelihood of t (t = 1, ..., T), summing over discrete latent states tau:
   // sum(prior * likelihood), where the geometric observation error likelihood is
   // weighted by the process-model prior
-  for(tau in 1:T)
-    gamma[tau:T] += pi[tau] * geometric_pmf(t1T[tau:T] - tau, r);
-  y ~ multinomial(gamma);   // distribution of counts by observed year
-  N ~ poisson(sum_lambda);  // marginal distribution of total count
+  y ~ multinomial(gamma * pi);   // distribution of counts by observed year
+  N ~ poisson(sum_lambda);       // marginal distribution of total count
 }
