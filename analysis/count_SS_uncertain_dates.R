@@ -186,6 +186,7 @@ print(fit_t, pars = "sigma", probs = c(0.025,0.5,0.975))
 ## @knitr fit_tobs
 fit_tobs <- stan(file = here("analysis","Poisson_multinomial_tobs_SS.stan"), 
                  data = list(T = TT, y = y, r = r), pars = c("sigma","x"),
+                 init = function() list(sigma = runif(1,0.1,0.5)),
                  chains = 3, iter = 2000, warmup = 1000,
                  control = list(adapt_delta = 0.99, max_treedepth = 12))
 ## @knitr print_fit_tobs
