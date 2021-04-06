@@ -215,14 +215,14 @@ plot(1:TT, lambda, type = "l", col = "dodgerblue", lwd = 3,
      las = 1, cex.axis = 1.2, cex.lab = 1.5, cex.main = 1.5, ylim = c(0,ul), 
      xlab = "", ylab = "count", main = "States and observations", font.main = 1, xpd = NA)
 rug(seq(0,TT,10)[seq(0,TT,10) %% 50 != 0], side = 1, ticksize = -0.02) 
-points(1:TT, chi, pch = 1, col = "dodgerblue")
+points(1:TT, chi, pch = ".", cex = 4, col = "dodgerblue")
 points(1:TT, y, type = "h", col = transparent("black", 0.3))
 legend("topleft", bty = "n", text.col = "white", cex = 1.2, pt.cex = 1,
        legend = expression(lambda[italic(t)], chi[italic(t)], italic(y)[italic(t)]),
        pch = c(NA,NA,"I"), col = c(NA, NA, transparent("black", 0.3)))
-legend("topleft", bty = "n", cex = 1.2, pt.cex = 1,
+legend("topleft", bty = "n", cex = 1.2, pt.cex = 4,
        legend = expression(lambda[italic(t)], chi[italic(t)], italic(y)[italic(t)]), 
-       pch = c(NA,1,NA), lty = c(1,NA,NA), lwd = c(3,NA,NA), 
+       pch = c(NA,".",NA), lty = c(1,NA,NA), lwd = c(3,NA,NA), 
        col = c("dodgerblue", "dodgerblue", NA))
 
 # fit to true, unknown times
@@ -236,7 +236,7 @@ polygon(c(1:TT, TT:1),
           rev(colQuantiles(lambda_tau, probs = 0.975))),
         col = transparent("dimgray", 0.5), border = NA)
 lines(1:TT, colMedians(lambda_tau), col = "dimgray", lwd = 3)
-points(1:TT, chi, pch = 1, col = "dodgerblue")
+points(1:TT, chi, pch = ".", cex = 4, col = "dodgerblue")
 legend("topleft", bty = "n", legend = expression(widehat(italic(lambda)[italic(t)])), 
        text.col = "white", cex = 1.2, lwd = 15, col = transparent("dimgray", 0.5))
 legend("topleft", bty = "n", legend = expression(widehat(italic(lambda)[italic(t)])), 
