@@ -575,9 +575,9 @@ tab &lt;- table(tt)
 y &lt;- replace(rep(0,TT), as.numeric(names(tab)), tab) # observed counts</code></pre>
 <p>First we’ll consider the ideal scenario. If we knew the true counts <span class="math inline">\(\boldsymbol{\chi}\)</span>, we could fit them with the Poisson-multinomial model:</p>
 <pre class="r"><code>fit_tau &lt;- stan(file = here(&quot;analysis&quot;,&quot;Poisson_multinomial_SS.stan&quot;), 
-              data = list(T = TT, y = chi), pars = c(&quot;sigma&quot;,&quot;x&quot;),
-              chains = 3, iter = 2000, warmup = 1000,
-              control = list(adapt_delta = 0.99, max_treedepth = 12))</code></pre>
+                data = list(T = TT, y = chi), pars = c(&quot;sigma&quot;,&quot;x&quot;),
+                chains = 3, iter = 2000, warmup = 1000,
+                control = list(adapt_delta = 0.99, max_treedepth = 12))</code></pre>
 <pre class="r"><code>print(fit_tau, pars = &quot;sigma&quot;, probs = c(0.025,0.5,0.975))</code></pre>
 <pre><code>Inference for Stan model: Poisson_multinomial_SS.
 3 chains, each with iter=2000; warmup=1000; thin=1; 

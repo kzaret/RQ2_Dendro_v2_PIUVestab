@@ -159,9 +159,9 @@ y <- replace(rep(0,TT), as.numeric(names(tab)), tab) # observed counts
 
 ## @knitr fit_tau
 fit_tau <- stan(file = here("analysis","Poisson_multinomial_SS.stan"), 
-              data = list(T = TT, y = chi), pars = c("sigma","x"),
-              chains = 3, iter = 2000, warmup = 1000,
-              control = list(adapt_delta = 0.99, max_treedepth = 12))
+                data = list(T = TT, y = chi), pars = c("sigma","x"),
+                chains = 3, iter = 2000, warmup = 1000,
+                control = list(adapt_delta = 0.99, max_treedepth = 12))
 ## @knitr print_fit_tau
 print(fit_tau, pars = "sigma", probs = c(0.025,0.5,0.975))
 ## @knitr
