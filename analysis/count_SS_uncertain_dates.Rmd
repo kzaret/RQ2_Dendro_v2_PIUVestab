@@ -223,7 +223,7 @@ Taking the observations at face value introduces a notable bias; the 95% credibl
 
 The time-uncertain Poisson-multinomial model does quite well with these data. As we would expect, the credible interval for the process noise SD is slightly wider than in `fit_tau`, where we had perfect knowledge of the event times. Plotting the estimated states highlights the differences among these three models.
 
-```{r plot_tobs, echo = FALSE, fig.width=10, fig.height=6, out.width="100%"}
+```{r plot_tobs, echo = FALSE, fig.width=10, fig.height=6, out.width="100%", fig.path=here("analysis","results","/")}
 <<plot_tobs>>
 ```
 
