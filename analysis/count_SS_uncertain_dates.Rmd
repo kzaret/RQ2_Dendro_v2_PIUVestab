@@ -48,7 +48,7 @@ Broadly and intuitively speaking, a state-space model is a type of hierarchical 
 
 ### Standard Formulation
 
-A typical state-space model for count time series is the Poisson state-space model, where the latent state $x_t$ for $t = 1, ..., T$ is assumed to follow a random walk or first-order autoregressive process, perhaps including covariate terms, and the observed count $y_t$ is Poisson distributed with mean $e^{x_t}$. The simplest process model is a Gaussian random walk,
+A typical state-space model for count time series is the Poisson state-space model, where the latent state $x_t$ for $t = 1, ..., T$ is assumed to follow a random walk or first-order autoregressive process, perhaps including covariate terms, and the observed count $y_t$ is Poisson distributed with log-mean $x_t$. The simplest process model is a Gaussian random walk,
 
 $$
 \begin{aligned}
