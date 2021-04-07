@@ -166,7 +166,7 @@ $$
 
 The normalization constant in the denominator ensures that the vector of cell probabilities $\boldsymbol{\gamma}_i$ sums to 1 over the time domain $1:T$. 
 
-```{r plot_geom_obs, echo = FALSE, fig.width=7, fig.height=5}
+```{r plot_geom_obs, echo = FALSE, fig.width=7, fig.height=5, fig.path=here("analysis","results","/")}
 <<plot_geom_obs>>
 ```
 
