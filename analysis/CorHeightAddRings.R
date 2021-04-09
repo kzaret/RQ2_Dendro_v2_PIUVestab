@@ -241,7 +241,7 @@ dat <- data.frame(iter = rep(indx, ncol(yrep)),
   mutate(tree = fct_reorder(.f = tree, .x = diff_rings / diff_height, .fun = mean))
 
 harv %>% ggplot(aes(x = tree, y = diff_rings / diff_height)) +
-  geom_violin(aes(x = tree, y = diff_rings / diff_height, group = tree), 
+  geom_violin(aes(x = tree, y = diff_rings / diff_height), 
               data = dat, color = "darkgray", fill = "darkgray", alpha = 0.8) +
   geom_jitter(shape = 16, alpha = 0.5, size = 1, width = 0.1, height = 0) +
   xlab("Sapling") + ylab("Additional rings / cm") +
