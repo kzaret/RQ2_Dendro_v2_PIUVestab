@@ -9,6 +9,7 @@
 # SETUP
 #===========================================================================
 
+## @knitr setup
 library(matrixStats)
 library(dplyr)
 library(forcats)
@@ -20,11 +21,13 @@ library(ggridges)
 library(here)
 options(mc.cores = parallel::detectCores(logical = FALSE) - 1)
 if(.Platform$OS.type == "windows") options(device = windows)
+## @knitr
 
 #===========================================================================
 # DATA
 #===========================================================================
 
+## @knitr data
 # 3 innermost ring widths for pithless-cored trees in all plots
 inner_rings_raw <- read.csv(here("data","PithlessTCs_InnerRingWidths.csv"), header = TRUE)
 inner_rings <- inner_rings_raw %>% 
@@ -46,6 +49,7 @@ duncan <- duncan_raw %>% rename(tree = `Core..`, h = H, width_1st_full_ring = X1
                                 downward_curvature = downward.curvature) %>% 
   mutate(patch = inner_rings$patch[match(tree, inner_rings$tree)], .before = tree) %>% 
   select(-duplicate) %>% filter(!is.na(patch) & !(tree %in% c("R0XT01a", "RLARGE01", "RLARGE02"))) 
+## @knitr
 
 
 #===========================================================================
@@ -55,40 +59,57 @@ duncan <- duncan_raw %>% rename(tree = `Core..`, h = H, width_1st_full_ring = X1
 # Global intercept + fixed effect of patch
 # Tree-level random intercept
 # Lognormal likelihood (log-transform data)
+## @knitr fit_lmer
 duncan_lmer <- stan_lmer(log(width) ~ patch + (1 | tree), data = inner_rings, 
                          chains = getOption("mc.cores"), iter = 5000, warmup = 1000)
 
+## @knitr print_fit_lmer
 print(duncan_lmer,2)
+## @knitr
 summary(duncan_lmer)
 
-## Diagnostic plots ##
+## DIAGNOSTIC PLOTS ##
 
 # Simulate draws from posterior predictive distribution
+## @knitr sim_ppd
 yrep <- posterior_predict(duncan_lmer)
 indx <- sample(nrow(yrep), 2000)
+## @knitr
 
 # Posterior predictive check: density overlay (note: takes a while)
+## @knitr ppd_dens_overlay_grouped
 ppc_dens_overlay_grouped(duncan_lmer$y, yrep[indx[1:500],], group = duncan_lmer$glmod$fr$patch)
+## @knitr
 
 # Posterior predictive check: histograms
+## @knitr ppc_hist
 ppc_hist(duncan_lmer$y, yrep[indx[1:3],])
+## @knitr
 
 # Posterior predictive check: mean
+## @knitr ppc_mean_grouped
 ppc_stat_grouped(duncan_lmer$y, yrep[indx,], group = duncan_lmer$glmod$fr$patch, stat = mean)
+## @knitr
 
 # Posterior predictive check: SD
+## @knitr ppc_sd_grouped
 ppc_stat_grouped(duncan_lmer$y, yrep[indx,], group = duncan_lmer$glmod$fr$patch, stat = sd)
+## @knitr
 
 # Normal QQ plot of tree-level random intercept point estimates, grouped by patch
+## @knitr qqnorm_intercept_patch
 ranef(duncan_lmer)$tree %>% rename(intercept = `(Intercept)`) %>% 
   mutate(patch = factor(tapply(duncan$patch, duncan$tree, unique))) %>% 
   ggplot(aes(sample = intercept)) + stat_qq(size = 2) + geom_qq_line() +
   theme_bw() + facet_wrap(vars(patch), ncol = 2)
+## @knitr
 
 # Normal QQ plot of observation-level residuals point estimates, grouped by patch
+## @knitr qqnorm_resid_patch
 data.frame(duncan_lmer$glmod$fr, resid = resid(duncan_lmer)) %>% 
   ggplot(aes(sample = resid)) + stat_qq(size = 2) + geom_qq_line() +
   theme_bw() + facet_wrap(vars(patch), ncol = 2)
+## @knitr
 
 
 #===========================================================================
@@ -103,6 +124,7 @@ data.frame(duncan_lmer$glmod$fr, resid = resid(duncan_lmer)) %>%
 
 # median of lognormal is exp(mu)
 # if wanted mean instead, would need exp(mu + 0.5*sigma^2)
+## @knitr calc_rtp
 d_hat <- exp(posterior_linpred(duncan_lmer, newdata = duncan))
 rtp <- sweep(1/d_hat, 2, duncan$r, "*")  # keep continuous version for plotting
 
@@ -111,6 +133,7 @@ rings_to_pith <- data.frame(duncan[rep(1:nrow(duncan), each = nrow(rtp)), c("pat
                             iter = rep(1:nrow(rtp), nrow(duncan)), 
                             rings_to_pith = as.vector(rtp))
 rownames(rings_to_pith) <- 1:nrow(rings_to_pith)
+## @knitr
 
 # Save posterior draws and stanfit objects
 save(list = c("duncan_lmer", "rings_to_pith"), 
@@ -126,6 +149,7 @@ save(list = c("duncan_lmer", "rings_to_pith"),
 save_plot <- TRUE
 dev.new()
 
+## @knitr duncan_lmer_ppd_violins
 dat <- data.frame(iter = rep(indx, ncol(yrep)),
                   patch = rep(duncan_lmer$glmod$fr$patch, each = length(indx)),
                   tree = rep(duncan_lmer$glmod$fr$tree, each = length(indx)),
@@ -139,6 +163,7 @@ inner_rings %>% ggplot(aes(x = tree, y = width)) +
   scale_y_log10() + xlab("Tree") + ylab("Inner ring width (cm)") + theme_bw(base_size = 16) + 
   theme(axis.ticks.x = element_blank(), axis.text.x = element_blank()) + 
   facet_wrap(vars(patch), scales = "free_x")
+## @knitr
 
 if(save_plot) 
   ggsave(filename=here("analysis", "results", "duncan_lmer_ppd_violins.png"),
@@ -148,6 +173,7 @@ if(save_plot)
 save_plot <- TRUE
 dev.new()
 
+## @knitr duncan_rings-to-pith_intervals
 mcmc_intervals_data(rtp, prob = 0.8, prob_outer = 0.95) %>% 
   mutate(patch = duncan$patch, tree = fct_reorder(duncan$tree, .x = m, .fun = identity)) %>% 
   ggplot(aes(x = tree, y = m)) +
@@ -159,6 +185,7 @@ mcmc_intervals_data(rtp, prob = 0.8, prob_outer = 0.95) %>%
   theme(axis.ticks.x = element_blank(), axis.text.x = element_blank(),
         panel.grid = element_blank()) + 
   facet_wrap(vars(patch), scales = "free")
+## @knitr
 
 if(save_plot) 
   ggsave(filename=here("analysis", "results", "duncan_rings-to-pith_intervals.png"),
@@ -170,6 +197,7 @@ if(save_plot)
 save_plot <- TRUE
 dev.new()
 
+## @knitr duncan_rings-to-pith_joyplots
 data.frame(iter = rep(nrow(rtp), ncol(rtp)),
            patch = rep(duncan$patch, each = nrow(rtp)),
            tree = rep(duncan$tree, each = nrow(rtp)),
@@ -184,6 +212,7 @@ data.frame(iter = rep(nrow(rtp), ncol(rtp)),
         strip.background = element_rect(color = "black", fill = "black"),
         strip.text = element_text(color = "white")) +
   facet_wrap(vars(patch), scales = "free")
+## @knitr
 
 if(save_plot) 
   ggsave(filename=here("analysis", "results", "duncan_rings-to-pith_joyplots.png"),
