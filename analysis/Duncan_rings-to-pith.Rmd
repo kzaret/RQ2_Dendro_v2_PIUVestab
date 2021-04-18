@@ -23,7 +23,7 @@ output:
 ```{r Rmd_setup, include=FALSE}
 knitr::opts_chunk$set(tidy = FALSE, highlight = TRUE, comment = NA, 
                       dev = "png", dev.args = list(type = "cairo-png"), dpi = 300,
-                      out.width = "60%", fig.align = "center")
+                      out.width = "80%", fig.align = "center")
 
 library(here)
 if(!require(captioner))
@@ -55,7 +55,7 @@ $$
 r = \dfrac{L^2}{8h} + \dfrac{h}{2}.
 $$
 
-The mean width of the innermost $N_{d}$ visible rings, $\bar{d} = \dfrac{1}{N_d} \sum_{i=1}^{N_{d}}{d_i}$, is then used as an estimate of the mean unobserved ring width to calculate missing rings as $r / \bar{d}$.
+The mean width of the innermost $N_{d}$ visible rings, $\bar{d} = (1 / N_d) \sum_{i=1}^{N_{d}}{d_i}$, is then used as an estimate of the mean unobserved ring width to calculate missing rings as $r / \bar{d}$.
 
 Propagating uncertainty blahblah...
 
@@ -101,7 +101,7 @@ Posterior predictive marginal density...
 
 Posterior predictive check for mean log ring width...
 
-```{r ppc_mean_patch, echo=FALSE, message=FALSE, fig.width=7, fig.height=7}
+```{r ppc_mean_patch, echo=FALSE, message=FALSE, fig.width=7, fig.height=7, out.width="80%"}
 <<ppc_mean_patch>>
 ```
 
@@ -132,7 +132,7 @@ We transformed the posterior samples to calculate the posterior distribution of 
 ```
 
 
-```{r duncan_rings-to-pith_joyplots, echo=FALSE, message=FALSE, fig.width=7, fig.height=7, out.width="80%"}
+```{r duncan_rings-to-pith_joyplots, echo=FALSE, message=FALSE, fig.width=7, fig.height=7}
 <<duncan_rings-to-pith_joyplots>>
 ```
 
