@@ -29,15 +29,17 @@ if(.Platform$OS.type == "windows") options(device = windows)
 
 ## @knitr data
 # 3 innermost ring widths for pithless-cored trees in all plots
-inner_rings_raw <- read.csv(here("data","PithlessTCs_InnerRingWidths.csv"), header = TRUE)
+inner_rings_raw <- read.csv(here("data","PithlessTCs_InnerRingWidths.csv"), 
+                            header = TRUE, stringsAsFactors = FALSE)
 inner_rings <- inner_rings_raw %>% 
   rename(patch = Patch, tree = Core_ID, ring = Ring_ID, width = Ring.Width) %>% 
   mutate(ring = substring(ring, nchar(ring)))
 
 # arc length (L) and height (h) of first full ring
-# remove trees not present in inner_rings, those with unknown plot ("RLARGE01", "RLARGE02"),
+# remove trees not present in inner_rings, those with unknown plot ("RLARGE01", "RLARGE02")
 # and those in plot "R0X" ("R0XT01a")
-duncan_raw <- read.csv(here("data","Duncan_estimates.csv"), header = TRUE, na.strings = c("NA","#DIV/0!"))
+duncan_raw <- read.csv(here("data","Duncan_estimates.csv"), header = TRUE, 
+                       na.strings = c("NA","#DIV/0!"), stringsAsFactors = FALSE)
 duncan <- duncan_raw %>% rename(tree = `Core..`, h = H, width_1st_full_ring = X1st.full.ring,
                                 r = Missing.Distance.To.Pith..DTP.,
                                 width_inner3_rings = Width.innermost.3.rings..WI3R.,
@@ -77,7 +79,7 @@ indx <- sample(nrow(yrep), 2000)
 ## @knitr
 
 # Posterior predictive check: density overlay (note: takes a while)
-## @knitr ppd_dens_overlay_grouped
+## @knitr ppc_dens_overlay_patch
 ppc_dens_overlay_grouped(duncan_lmer$y, yrep[indx[1:500],], group = duncan_lmer$glmod$fr$patch)
 ## @knitr
 
@@ -87,19 +89,19 @@ ppc_hist(duncan_lmer$y, yrep[indx[1:3],])
 ## @knitr
 
 # Posterior predictive check: mean
-## @knitr ppc_mean_grouped
+## @knitr ppc_mean_patch
 ppc_stat_grouped(duncan_lmer$y, yrep[indx,], group = duncan_lmer$glmod$fr$patch, stat = mean)
 ## @knitr
 
 # Posterior predictive check: SD
-## @knitr ppc_sd_grouped
+## @knitr ppc_sd_patch
 ppc_stat_grouped(duncan_lmer$y, yrep[indx,], group = duncan_lmer$glmod$fr$patch, stat = sd)
 ## @knitr
 
 # Normal QQ plot of tree-level random intercept point estimates, grouped by patch
 ## @knitr qqnorm_intercept_patch
 ranef(duncan_lmer)$tree %>% rename(intercept = `(Intercept)`) %>% 
-  mutate(patch = factor(tapply(duncan$patch, duncan$tree, unique))) %>% 
+  mutate(patch = factor(tapply(inner_rings$patch, inner_rings$tree, unique))) %>% 
   ggplot(aes(sample = intercept)) + stat_qq(size = 2) + geom_qq_line() +
   theme_bw() + facet_wrap(vars(patch), ncol = 2)
 ## @knitr
