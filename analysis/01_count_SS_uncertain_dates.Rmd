@@ -1,0 +1,244 @@
+---
+title: "Modeling Count Time Series with Individual Time Uncertainty"
+author: 
+  - Kyla S. Zaret, Portland State University
+  - Eric R. Buhle, Biomark Applied Biological Services and Northwest Fisheries Science Center
+  - Andrés Holz, Portland State University
+date: "`r format(Sys.time(), '%Y-%m-%d')`"
+output: 
+  html_document:
+    df_print: paged
+    fig_caption: true
+    theme: cerulean
+    toc: true
+    toc_float: true
+---
+
+<style type="text/css">
+  body{
+  font-size: 11pt;
+}
+</style>
+
+```{r Rmd_setup, include=FALSE}
+knitr::opts_chunk$set(tidy = FALSE, highlight = TRUE, comment = NA, 
+                      dev = "png", dev.args = list(type = "cairo-png"), dpi = 300,
+                      out.width = "60%", fig.align = "center")
+
+library(here)
+if(!require(captioner))
+  devtools::install_github("adletaw/captioner")
+library(captioner)
+fig_nums <- captioner("Figure ", suffix = ": ", auto_space = FALSE, style = "b", style_prefix = TRUE)
+```
+```{r width, include=FALSE}
+options(width = 130)
+```
+```{r read_chunks, echo = FALSE}
+knitr::read_chunk(here("analysis","01_count_SS_uncertain_dates.R"))
+```
+
+## Background
+
+This vignette describes a novel [?] approach for modeling time series of discrete count data in which the time indices associated with the individual events being counted are subject to observation error. The scenario motivating the development of this approach comes from dendrochronology, where the age (i.e., years since recruitment) of a tree is inferred by counting annual growth rings in one or more cores or sections. These age observations are often imperfect; typically the observed age represents a minimum, because some rings may be missed due to small growth increments or the height at which the cores or sections were taken. Various methods exist for correcting the initial recorded age, but these necessarily introduce uncertainty into the estimate. Here, we are interested in the time series of recruitment, i.e., the count of all trees that established in each year. These data contain information on the population dynamics, such as masting events or signals of environmental forcing or disturbance. Because the dates of the individual recruitment events that comprise the counts are only approximately known, however, we cannot use standard time series models that assume the time dimension is known without error.
+
+To the best of my knowledge, this problem has not previously been studied in the time-series literature. [***UNLESS*** *I have accidentally just reinvented the ageing-error matrices used in fisheries stock assessment, which would be pretty embarrassing. Stay tuned...*] The state-space framework is designed to handle data that contain observation error, but familiar state-space models still assume the time index of each observation is known. [Sambridge (2016)](https://agupubs.onlinelibrary.wiley.com/doi/full/10.1002/2016JB012901) and [Rehfield and Kurths (2014)](https://agupubs.onlinelibrary.wiley.com/doi/full/10.1002/2016JB012901) describe methods for time series such as paleoclimate reconstructions, where the sample dates are estimated with error, but this is different from our dendrochronology problem. Sambridge's approach is based on the general [errors-in-variables](https://en.wikipedia.org/wiki/Errors-in-variables_models) regression framework, where both the "independent variable" (in this case time) and the response variable contain stochastic noise. For count data, this implies that the observed count $y_t$ actually occurred at some unknown time $\tau$ to be estimated by the model. By contrast, in our example each of the $y_t$ tree recruitment events is subject to a unique error in $t$. We therefore need a model that disaggregates the counts into individual events.
+
+## Poisson State-Space Models
+
+Our starting point is a familiar and very general class of models for time series that contain both process and observation error. An overview of the state-space framework is beyond the scope of this vignette, but good introductions can be found in, e.g., [Clark and Bjornstad 2004](https://esajournals.onlinelibrary.wiley.com/doi/abs/10.1890/03-0520), [Kery and Schaub 2011](https://www.elsevier.com/books/bayesian-population-analysis-using-winbugs/kery/978-0-12-387020-9), and the user manual for the [**MARSS** package](https://cran.r-project.org/web/packages/MARSS/vignettes/UserGuide.pdf), among many other references. 
+
+Broadly and intuitively speaking, a state-space model is a type of hierarchical model consisting of two coupled probabilistic components or submodels. The **process model** or **state model** describes the underlying system dynamics, i.e., the stochastic evolution of the true but hidden states of nature regarded as latent variables. The **observation model** or **measurement model** describes the stochastic mechanism by which the data arise from noisy, imperfect measurements of the states or their physical proxies.
+
+### Standard Formulation
+
+A typical state-space model for count time series is the Poisson state-space model, where the latent state $x_t$ for $t = 1, ..., T$ is assumed to follow a random walk or first-order autoregressive process, perhaps including covariate terms, and the observed count $y_t$ is Poisson distributed with log-mean $x_t$. The simplest process model is a Gaussian random walk,
+
+$$
+\begin{aligned}
+x_t &= x_{t-1} + w_t \\
+w_t &\sim N(0, \sigma) \\
+x_0 &\sim N(\mu_0, \sigma_0).
+\end{aligned}
+$$
+
+The annual process errors $w_t$ (also known as innovations or shocks) are normally distributed with SD $\sigma$, and the initial state $x_0$ has a normal prior with mean $\mu_0$ and SD $\sigma_0$. The observation model is simply
+
+$$y_t \sim \textrm{Pois}(e^{x_t}).$$
+
+This state-space model is analogous to a Poisson GLMM with log link function, where the hierarchical or "random effects" are the latent states. Unlike in a GLMM, the latent states are not independently drawn from a hyperdistribution but have a serial dependence structure induced by the process model. 
+
+### Conditional Multinomial Formulation
+
+Our first modification to the standard Poisson state-space model is to disaggregate the count $y_t$ into a vector of $t$ repeated $y_t$ times. To do this, we exploit the well-known relationship between the [Poisson and multinomial distributions](https://online.stat.psu.edu/stat504/node/48/). The Poisson is closed under addition, and the joint distribution of a set of $J$ independent Poisson random variables $Y_j$ with means $\lambda_j$ can be factored into a Poisson marginal distribution for the sum and a multinomial conditional distribution for the counts, given their sum:
+
+$$
+\textrm{Pois}(\mathbf{y} | \boldsymbol{\lambda}) = 
+\textrm{Pois}(N | \Lambda) ~
+\textrm{Multinom} (\mathbf{y} | N, \boldsymbol{\pi}),
+$$
+
+where $N = \sum_{j}{y_j}$, $\Lambda = \sum_{j}{\lambda_j}$ and $\boldsymbol{\pi} = \boldsymbol{\lambda} / \Lambda$. 
+
+This conditional relationship implies that both formulations will produce equivalent likelihood functions. This fact is often used in the reverse direction, when fitting surrogate Poisson log-linear GLMs to multinomial data summarized in contingency tables. Even when the sample size $N$ is fixed by design and thus the multinomial by itself could be used to model the cell frequencies, it is more convenient to work with the Poisson because the elements of $\boldsymbol{\lambda}$ are independent, unlike $\boldsymbol{\pi}$ under the sum-to-one constraint. For our purposes, though, the conditional multinomial is more useful. Since a multinomial sample of size $N$ is just the sum of $N$ IID categorical trials (in the same way that a binomial random variable is the sum of Bernoulli trials), each trial $i = 1, ..., N$ can be considered as a conditionally independent data point.
+
+The marginal Poisson / conditional multinomial factorization applies to the Poisson state-space observation model as well. The index $j$ is simply replaced by time $t$, and $\lambda_t = e^{x_t}$.
+
+### Fitting the Models with RStan
+
+To illustrate the Poisson state-space model in both its standard and conditional multinomial forms, and to introduce Bayesian inference for these models, we'll use [Stan](https://mc-stan.org/) to fit the models to a simulated data set. Stan is a probabilistic programming language and modeling platform that implements state-of-the-art Bayesian computation using Hamiltonian Monte Carlo (HMC) sampling (see [Monnahan et al. 2018](https://besjournals.onlinelibrary.wiley.com/doi/full/10.1111/2041-210X.12681) for an ecology-centric introduction). Stan is accessed from R via the [**rstan**](https://mc-stan.org/users/interfaces/rstan.html) package, which includes numerous functions and methods for inference and diagnostic checking on the posterior samples. 
+
+Let's load **rstan** and some other packages we'll need, and set the number of cores to use when running parallel MCMC chains.
+
+```{r setup, message=FALSE}
+```
+```{r load_stanmodels, echo=FALSE}
+if(file.exists(here("analysis","results","Poisson_SS.RData")))
+   load(here("analysis","results","Poisson_SS.RData"))
+```
+
+We'll make the simulated time series long enough to be reasonably informative and set the process error SD $\sigma$ so that the lognormal distribution of the expected count $\lambda_t$, conditional on $\lambda_{t-1}$, has a 30% CV. To keep things simple, we set $\mu_0 = 0$ and $\sigma_0 = \sigma$.
+
+```{r Poisson_SS_sim}
+```
+
+Here is the same model we just simulated from, coded as a Stan program.
+
+```{r Poisson_SS.stan, echo=FALSE}
+writeLines(readLines(here("analysis","Poisson_SS.stan")))
+```
+
+Most of the code is intuitive and closely follows the math, but we've used a common and extremely useful reparameterization called hierarchical noncentering (or less formally the "Matt trick" after Stan team member Matt Hoffman; see Section 22.7 of the [Stan 2.24 Users Guide](https://mc-stan.org/docs/2_24/stan-users-guide-2_24.pdf)). Instead of declaring the latent states $\mathbf{x}$ as a primitive parameter, we declare a vector of standardized residuals $\mathbf{z} = \mathbf{w}/\sigma$ which are given a unit normal prior. After rescaling, this implies the appropriate conditionally normal process model prior on $x_t$. Monnahan et al. (2018) further discuss the reasons why the noncentered parameterization of "random effects" almost always produces better-behaved sampling than the naive centered parameterization in practice. Finally, because we're doing Bayesian inference we have to specify priors on all the top-level or hyperparameters, in this case just $\sigma$, which we give a $N(0,3)$ prior -- weakly informative on the log scale, but not so implausibly broad as to invite sampling problems.
+
+The marginal Poisson / conditional multinomial model looks like this when translated into Stan:
+
+```{r Poisson_multinomial_SS.stan, echo=FALSE}
+writeLines(readLines(here("analysis","Poisson_multinomial_SS.stan")))
+```
+
+Now we're ready to call Stan from R to draw a sample from the posterior distribution of the Poisson state-space model, given the simulated data. We run 3 randomly initiated parallel chains of 2000 iterations, discarding the first 1000 for warmup (the HMC algorithm requires careful tuning, which Stan automates with the No U-Turn Sampler or NUTS).
+
+```{r fit_pois, eval = !exists("fit_pois")}
+```
+```{r print_fit_pois}
+```
+
+The Gelman-Rubin $\hat{R}$ diagnostic is perfect, indicating the chains mixed well, and the effective sample size (adjusting for autocorrelation) is plenty for our purposes, so we can safely proceed to use the sample for posterior inference. We could further explore the posterior interactively in ShinyStan by calling `launch_shinystan(fit_pois)`. The posterior mean for $\sigma$ of `r round(get_posterior_mean(fit_pois,"sigma")[4], 2)` is close to the true value of `r sigma` and the 95% credible interval (`r round(colQuantiles(as.matrix(fit_pois,"sigma"), probs = c(0.025, 0.975)), 2)`) includes it.
+
+Now let's fit the conditional multinomial model.
+
+```{r fit_pois_mn, eval = !exists("fit_pois_mn")}
+```
+```{r print_fit_pois_mn}
+```
+
+As expected, the posterior distribution of the hyperparameter $\sigma$ is identical under the two formulations, and of course the equivalence applies to the states as well. 
+
+```{r plot_pois_mn, echo = FALSE, fig.width=7, fig.height=5}
+<<plot_pois_mn>>
+```
+
+This plot shows the evolution of the true state $\lambda_t$ along with the observed counts $y_t$. The posterior distribution of the estimated states $\widehat{\lambda_t}$ (median and 95% credible interval), after using the data to update our essentially noninformative prior, is shown in gray. The model does a good job of filtering out the observation noise to recover the true dynamics. The state-space model smooths out the local wiggliness in $\boldsymbol{\lambda}$ because the data are fairly sparse ($N =$ `r sum(y)`), favoring shrinkage.
+
+## Individual Time Uncertainty
+
+### Theory
+
+So far we have assumed that the observed count of events at each time $y_t$ (or equivalently the time index $t_i$ of each individual event, for $i = 1, ..., N$) is unambiguously known. Now consider the situation where $t_i$ is corrupted by observation error. Specifically, suppose the error distribution is right-tailed, so the observed time stamp represents the maximum possible true value. This corresponds to our dendrochronology scenario, where the observed, uncorrected tree age $a_i = T - t_i$ is a *minimum* estimate of the number of annual growth rings.
+
+A simple one-parameter candidate for such an observation error model is the geometric or discrete exponential distribution. If a discrete random variable $Y \in \{0,1,2,3,...\}$ has a geometric distribution with parameter $r \in (0,1]$, its probability mass function is given by
+
+$$ 
+f(k | r) = P(Y = k \mid r) = r(1 - r)^k.
+$$
+
+Let $\tau_i$ be the true, unknown time index of event $i$ and $\chi_\tau$ the "true count" that would be observed at time $\tau$ if the time indices were known. Then under the Poisson-multinomial state-space model, $\tau_i$ follows a categorical distribution (i.e., a multinomial distribution with sample size 1) with cell probabilities $\boldsymbol{\pi}$, and the true counts are the sum of these $N$ IID categorical trials: $\boldsymbol{\chi} \sim \textrm{Multinom}(N,\boldsymbol{\pi})$. The estimated time $t_i$ differs from the truth by a geometrically distributed observation error $g_i$, and as a result the observed counts $\mathbf{y}$ depart from the true $\boldsymbol{\chi}$:
+
+$$
+\begin{align}
+t_i &= \tau_i + g_i  \\
+g_i &\sim \textrm{Geom}(r).
+\end{align}
+$$
+
+This implies that the observation model for $t_i$ is a different categorical distribution, $t_i \sim \textrm{Multinom}(1, \boldsymbol{\gamma}_i)$, where 
+
+$$
+\gamma_{it} = P(t_i = t \mid \tau_i, r) = 
+\dfrac{f(t - \tau_i \mid r)}{\sum_{j=1}^{T}{f(t - j \mid r)}}.
+$$
+
+The normalization constant in the denominator ensures that the vector of cell probabilities $\boldsymbol{\gamma}_i$ sums to 1 over the time domain $1:T$. 
+
+```{r plot_geom_obs, echo = FALSE, fig.width=7, fig.height=5, fig.path=here("analysis","results","/")}
+<<plot_geom_obs>>
+```
+
+This plot illustrates the observation model for $t_i$ when the true time is $\tau_i =$ `r tau_i` and $r =$ `r r`. The most likely observed time is the true value, but $t_i$ values as large as `r tau_i + qgeom(0.95,r)` have substantial probability mass.
+
+### Stan Implementation
+
+Programming the time-uncertain model in Stan is complicated by the fact that the latent state $\tau_i$ is a *discrete* random variable. Because HMC uses gradients of the posterior surface, it cannot handle discrete parameters. To encode such models in Stan, we need to manually compute the marginal likelihood by integrating (i.e., summing) the discrete parameters out of the joint distribution. In our case, that looks like
+
+$$
+\begin{align}
+P(t_i = t \mid r) &= \sum_{\tau_i = 1}^{T}{P(\tau_i) \, P(t_i = t \mid \tau_i, r)} \\
+&= \sum_{\tau_i = 1}^{T}{\pi_{\tau_i} \, \gamma_{it}}.
+\end{align}
+$$
+
+Intuitively, the marginal likelihood is just a weighted average of the conditional likelihood of $t_i$ given $\tau_i$, weighted by the prior probability (from the process model) of each possible value that $\tau_i$ could take on. Coding this summation in Stan involves some tricks that we will not belabor, but the User Guide devotes an entire chapter (Ch. 7) to latent discrete parameters.
+
+This implementation treats the observation error parameter $r$ as known *a priori* -- essentially a point-mass prior on the true value. This is intended to represent the situation where we have some prior information on the error distribution for each observation $t_i$, e.g., from a tree ring age-correction model. In reality the situation is more complex, and there will likely be a unique error distribution for each age estimate. This added complexity could be built upon the minimal model here. 
+
+```{r Poisson_multinomial_tobs_SS.stan, echo=FALSE}
+writeLines(readLines(here("analysis","Poisson_multinomial_tobs_SS.stan")))
+```
+
+### Comparing Models
+
+We are now in a position to ask whether it is possible to recover the underlying states and parameters from a count time series that is corrupted by individual-level time uncertainty. We can also ask how much better we could do if there was no time uncertainty, and how badly the inference would suffer if we simply ignored it.
+
+Let's simulate some time-uncertain data from the generative model described above. In this case we'll use the direct Poisson-multinomial formulation so we can fix the total sample size $N$ at something reasonably large and hopefully informative.
+
+```{r Poisson_tobs_SS_sim}
+```
+
+First we'll consider the ideal scenario. If we knew the true counts $\boldsymbol{\chi}$, we could fit them with the Poisson-multinomial model:
+
+```{r fit_tau, eval = !exists("fit_tau")}
+```
+```{r print_fit_tau}
+```
+
+As expected, the posterior distribution of $\sigma$ is close to the true value of `r sigma`. Next we'll consider a scenario of ignorance, in which we assume the observed event times are correct as measured:
+
+```{r fit_t, eval = !exists("fit_t")}
+```
+```{r print_fit_t}
+```
+
+Taking the observations at face value introduces a notable bias; the 95% credible interval for $\sigma$ does not include the true value. Finally, we'll fit the model that generated the data and see if it recovers the true parameters:
+
+```{r fit_tobs, eval = !exists("fit_tobs")}
+```
+```{r print_fit_tobs}
+```
+
+The time-uncertain Poisson-multinomial model does quite well with these data. As we would expect, the credible interval for the process noise SD is slightly wider than in `fit_tau`, where we had perfect knowledge of the event times. Plotting the estimated states highlights the differences among these three models.
+
+```{r plot_tobs, echo = FALSE, fig.width=10, fig.height=6, out.width="100%", fig.path=here("analysis","results","/")}
+<<plot_tobs>>
+```
+
+Relative to the true counts $\boldsymbol{\chi}$, the observed counts $\mathbf{y}$ are not linearly translated rightward, but jittered to the right by the mixture of individual geometrically distributed aging errors. While the Poisson-multinomial model fitted to the true counts does an excellent job of "seeing through" the Poisson observation error to recover the states, the naive approach to fitting the time-uncertain observations produces badly biased estimates that, like the data, are shifted to the right. The time-uncertain model, however, is able to reconstruct the underlying states quite faithfully. The posterior of the process model is a little smoother (less wiggliness, more shrinkage) and a bit more uncertain than in the ideal case, but this is a small price to pay for the ability to correct for ageing error and avoid catastrophic bias caused by ignoring it.
+
+## Prospectus
+
+This proof-of-concept vignette demonstrates that it is possible to retrieve usable information on the underlying system dynamics from a time series of counts that have been corrupted by individual-level observation error in recorded times. Recruitment time series inferred from tree growth rings are an example of this kind of data. In real applications, the ageing error distributions and the nature of the observations are likely to be more complex than is presented here (e.g., minimum ring counts, predictions of the number of unobserved rings from various models, informative prior distributions on the latent times $t_i$ based on Bayesian analysis of an observation model, etc.). Additional complexity arises from nested sites / plots / subplots, which could be incorporated using "random effects" (i.e., IID hierarchical terms). Further, the questions of interest will typically involve covariates such as climate proxies; it is straightforward to add predictor terms to the process model.
+
+Finally, when I was nearly finished with this vignette it occurred to me that the time-uncertain Poisson-multinomial model has a close and natural relationship to the ageing-error matrices used in some integrated marine fisheries stock assessment models, as well as more general discrete-state state-space models that have appeared in the ecology and wildlife science literature. These connections bear further investigation; it may well turn out that this method is not so novel after all, and there may be established frameworks that can be fruitfully applied to dendrochronology.
+
+
+
+<div class="tocify-extend-page" data-unique="tocify-extend-page" style="height: 3;"></div>
