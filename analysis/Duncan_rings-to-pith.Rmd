@@ -23,7 +23,7 @@ output:
 ```{r Rmd_setup, include=FALSE}
 knitr::opts_chunk$set(tidy = FALSE, highlight = TRUE, comment = NA, 
                       dev = "png", dev.args = list(type = "cairo-png"), dpi = 300,
-                      out.width = "80%", fig.align = "center")
+                      out.width = "70%", fig.align = "center")
 
 library(here)
 if(!require(captioner))
@@ -74,9 +74,9 @@ Describe modeling approach...
 
 $$
 \begin{aligned}
-\text{log}(d_i) &= \mu_{\text{tree}[i]} + \epsilon_i = \beta_{\text{patch}[i]} + b_{\text{tree}[i]} + \epsilon_i \\
+\text{log}(d_i) &\sim N(\mu_{\text{tree}[i]}, \sigma_d) \\
+\mu_{\text{tree}[i]} &= \beta_{\text{patch}[i]} + b_{\text{tree}[i]} \\
 b_{\text{tree}} &\sim N(0,\sigma_\text{tree}) \\
-\epsilon_i &\sim N(0,\sigma_d).
 \end{aligned}
 $$
 
