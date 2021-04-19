@@ -29,14 +29,17 @@ if(.Platform$OS.type == "windows") options(device = windows)
 
 ## @knitr data
 # 3 innermost ring widths for pithless-cored trees in all plots
+# remove trees with unknown plot ("RLARGE01", "RLARGE02")
+# and those in plot "R0X" ("R0XT01a")
 inner_rings_raw <- read.csv(here("data","PithlessTCs_InnerRingWidths.csv"), 
                             header = TRUE, stringsAsFactors = FALSE)
 inner_rings <- inner_rings_raw %>% 
   rename(patch = Patch, tree = Core_ID, ring = Ring_ID, width = Ring.Width) %>% 
-  mutate(ring = substring(ring, nchar(ring)))
+  mutate(ring = substring(ring, nchar(ring))) %>%
+  filter(tree %in% c("R0XT01a", "RLARGE01", "RLARGE02"))
 
 # arc length (L) and height (h) of first full ring
-# remove trees not present in inner_rings, those with unknown plot ("RLARGE01", "RLARGE02")
+# remove trees in Cushion patch, those with unknown plot ("RLARGE01", "RLARGE02")
 # and those in plot "R0X" ("R0XT01a")
 duncan_raw <- read.csv(here("data","Duncan_estimates.csv"), header = TRUE, 
                        na.strings = c("NA","#DIV/0!"), stringsAsFactors = FALSE)
@@ -50,7 +53,8 @@ duncan <- duncan_raw %>% rename(tree = `Core..`, h = H, width_1st_full_ring = X1
                                 duplicate = Adj.rings.to.pith.values,
                                 downward_curvature = downward.curvature) %>% 
   mutate(patch = inner_rings$patch[match(tree, inner_rings$tree)], .before = tree) %>% 
-  select(-duplicate) %>% filter(!is.na(patch) & !(tree %in% c("R0XT01a", "RLARGE01", "RLARGE02"))) 
+  filter(substring(tree,1,1) != "C" & !(tree %in% c("R0XT01a", "RLARGE01", "RLARGE02"))) %>% 
+  select(-duplicate)
 ## @knitr
 
 
